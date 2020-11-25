@@ -1,10 +1,14 @@
 from instabot import Bot as Instabot
 import json
+import requests
+
+from exceptions import *
 
 
 class CovidStatsInstagramBot:
 
     COUNTRY = "israel"
+    API_BASE_URL = "https://api.covid19api.com/dayone/country/"
     SOCIALMEDIA_INFO_PATH = "login-info.json"
 
     @classmethod
@@ -27,3 +31,18 @@ class CovidStatsInstagramBot:
 
         # upload the given photo
         bot.upload_photo(img_path, caption=caption)
+
+    @classmethod
+    def get_stats(cls):
+        """ Returns the Covid data from covid19api.com """
+
+        # Make a request to the api
+        url = cls.API_BASE_URL + cls.COUNTRY
+        response = requests.get(url=url)
+
+        # Check if data loaded correctly
+        if response.status_code != 200:
+            raise requestAPIError(
+                f"{url}:\nResponse status {response.status_code}.")
+
+        return response.json()
