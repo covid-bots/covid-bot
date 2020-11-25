@@ -8,7 +8,7 @@ class API:
 
     MAIN_URL = URL("https://api.covid19api.com")
 
-    def __request(url: URL) -> requests.Response:
+    def __request(url: URL) -> list:
         """ Make an http request, and check for errors. """
 
         response = requests.get(url=url.as_string())
@@ -38,7 +38,7 @@ class API:
         return url
 
     @classmethod
-    def get_day_one_all_stats(cls, country: str, last_x_days: int = None):
+    def get_stats(cls, country: str, last_x_days: int = None):
         """ Returns all cases by case type for a country from the first recorded
         case. """
 
@@ -50,13 +50,15 @@ class API:
         if last_x_days:
             response_json = response_json[-last_x_days:]
 
+        response_json.reverse()
+
         return [SingleDayData(day_data_dict)
                 for day_data_dict in response_json]
 
     @classmethod
     def get_today_stats(cls, country: str):
         """ Returns the data Covid data TODAY from the given country. """
-        return cls.get_day_one_all_stats(country, last_x_days=1)[0]
+        return cls.get_stats(country, last_x_days=1)[0]
 
 
 class SingleDayData:
