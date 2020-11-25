@@ -100,6 +100,21 @@ class DayDataDiff:
     def active_percentage_diff(self):
         return self.__generate_percentage_diff(self.__newest.active_cases, self.__older.active_cases)
 
+    @property
+    def new_cases(self):
+        """ Returns the total amount of new cases between the two dates. """
+
+        new_active_cases = self.__newest.active_cases
+        old_active_cases = self.__older.active_cases
+        deaths_delta = self.__newest.deaths - self.__older.deaths
+        recovered_delta = self.__newest.recovered_cases - self.__older.recovered_cases
+
+        # Calculate the amount of cases the were active cases before,
+        # and are still active cases.
+        old_cases_still_cases = old_active_cases - deaths_delta - recovered_delta
+
+        return new_active_cases - old_cases_still_cases
+
 
 class Covid19API:
 
