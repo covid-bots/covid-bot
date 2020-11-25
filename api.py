@@ -53,6 +53,11 @@ class API:
         return [SingleDayData(day_data_dict)
                 for day_data_dict in response_json]
 
+    @classmethod
+    def get_today_stats(cls, country: str):
+        """ Returns the data Covid data TODAY from the given country. """
+        return cls.get_day_one_all_stats(country, last_x_days=1)[0]
+
 
 class SingleDayData:
     """ Represents Covid data about a single day, from a single country. """
@@ -100,7 +105,3 @@ class SingleDayData:
     @property
     def date(self):
         return self.__raw_data_dict["Date"]
-
-
-day = API.get_day_one_all_stats("Israelk", 1)
-print(day[0].active_cases)
