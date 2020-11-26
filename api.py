@@ -66,13 +66,23 @@ class multipleDaysData:
         ]
 
     def get_data_before_x_days(self, days: int):
-        return SingleDayData(self.__raw[-days])
+        return self.__daydata[-days]
 
     def get_today(self,):
         return self.get_data_before_x_days(1)
 
     def get_yesterday(self,):
         return self.get_data_before_x_days(2)
+
+    def compare_dates(self, date1: int, date2: int):
+        new = self.get_data_before_x_days(min(date1, date2))
+        old = self.get_data_before_x_days(max(date1, date2))
+        return DayDataDiff(new, old)
+
+    def compare_to_yesterday(self):
+        """ Returns a `DayDataDiff` object that represents the data changes
+        accrued between today and yesterday. """
+        return self.compare_dates(1, 2)
 
     def get_deaths_list(self,):
         return [daydata.deaths for daydata in self.__daydata]
@@ -196,17 +206,3 @@ class Covid19API:
     def get_today_stats(cls, country: str):
         """ Returns the data Covid data TODAY from the given country. """
         return cls.get_stats(country, last_x_days=1)[0]
-
-    @staticmethod
-    def compare_day_data(newest: SingleDayData, older: SingleDayData) -> DayDataDiff:
-        """ Compares the two day data objects, and returns an `DayDataDiff`
-        instance. """
-        return DayDataDiff(newest=newest, older=older)
-
-    @classmethod
-    def compare_last_two_days(cls, country: str):
-        """ Compares the data from today and yesterday,
-        and returns an `DayDataDiff` object. """
-
-        data = cls.get_stats(country, last_x_days=2)
-        return cls.compare_day_data(data.get_today(), data.get_yesterday())
