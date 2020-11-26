@@ -2,6 +2,7 @@ from instabot import Bot as Instabot
 import json
 import requests
 from datetime import datetime
+from os import remove
 
 from exceptions import *
 from api import Covid19API
@@ -22,6 +23,7 @@ class CovidStatsInstagramBot:
     SUBTITLE_NO_CHANGE = "יוניש אלל"
     GRAPH_TITLE = "םינורחאה םיישדוחב ,םויב םישדח םילוח :ףרג"
     BOTTOM_TEXT_TEMPLATE = "%d | @covid_israel | ישילש דצ ידי לע קפוסמו ,ימשר וניא עדימה"
+    CAPTION_TEMPLATE = "מצב נגיף הקורונה בישראל - %d 🦠😷🏥\nשמירה על ההנחיות מצילה חיים. רק כך נוכל לחזור לשגרה! 🙂"
 
     @classmethod
     def upload_image(cls, img_path: str, caption: str = None):
@@ -95,3 +97,24 @@ class CovidStatsInstagramBot:
             img, cls.BOTTOM_TEXT_TEMPLATE.replace("%d", date_str))
 
         return img
+
+    @classmethod
+    def get_caption(cls):
+        date = datetime.today()
+        date_str = date.strftime("%d/%m/%Y")
+        return cls.CAPTION_TEMPLATE.replace("%d", date_str)
+
+
+if __name__ == "__main__":
+
+    TEMP_FILE = "TEMPIMG.jpg"
+
+    # Generate and save the covid image.
+    img = CovidStatsInstagramBot.get_image().convert("RGB")
+    img.save(TEMP_FILE)
+
+    # Upload the image to instagram
+    caption = CovidStatsInstagramBot.get_caption()
+    CovidStatsInstagramBot.upload_image(TEMP_FILE, caption)
+
+    remove(TEMP_FILE)
