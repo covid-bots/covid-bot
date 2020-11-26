@@ -138,4 +138,5 @@ dmypy.json
 cython_debug/
 
 # Custom
-login-info.json
+logininfo.json
+config/
