@@ -1,5 +1,5 @@
 from typing import Tuple
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import math
 from os import path, listdir
 import random
@@ -8,17 +8,60 @@ import random
 class ImageGenerator:
 
     BACKGROUND_COLORS = {
-        0:     (105, 191, 226),
-        100:   (105, 226, 185),
-        250:   (111, 226, 105),
-        500:   (168, 226, 105),
-        1000:  (246, 171, 65),
-        2500:  (246, 120, 65),
-        5000:  (246, 65,  65),
-        10000: (140, 29,  20),
+        0:      (105, 191, 226),
+        100:    (105, 226, 185),
+        250:    (111, 226, 105),
+        500:    (168, 226, 105),
+        1_000:  (246, 171, 65),
+        2_500:  (246, 120, 65),
+        5_000:  (246, 65,  65),
+        10_000: (140, 29,  20),
     }
 
-    RANDOM_BACKGROUND_IMAGES_FOLDER = path.join("assets", "backgrounds")
+    ASSETS_FOLDER = path.join("assets")
+    RANDOM_BACKGROUND_IMAGES_FOLDER = path.join(ASSETS_FOLDER, "backgrounds")
+
+    # - - - T I T L E S - A N D - V A L U E S - - - #
+
+    TITLE_COLOR = (255, 255, 255, 255)
+    VALUE_COLOR = (255, 255, 255, 255)
+
+    VALUE_TITLE_RATIO = 1.5  # value is 1.5 times bigger then title
+    BIG_TITLE_SIZE = 200
+    SMALL_TITLE_SIZE = 100
+
+    BIG_TITLE_START_X = 350
+
+    # - - -  F O N T S  - - - #
+
+    FONTS_FOLDER = path.join(ASSETS_FOLDER, "fonts")
+    TITLE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
+    VALUE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Black.ttf")
+
+    # Load fonts
+    BIG_TITLE_FONT = ImageFont.truetype(
+        TITLE_FONT_PATH, size=BIG_TITLE_SIZE)
+    BIG_VALUE_FONT = ImageFont.truetype(
+        VALUE_FONT_PATH, size=int(BIG_TITLE_SIZE * VALUE_TITLE_RATIO))
+    SMALL_TITLE_FONT = ImageFont.truetype(
+        TITLE_FONT_PATH, size=SMALL_TITLE_SIZE)
+    SMALL_VALUE_FONT = ImageFont.truetype(
+        VALUE_FONT_PATH, size=int(SMALL_TITLE_SIZE * VALUE_TITLE_RATIO))
+
+    @classmethod
+    def add_big_title(cls, base_img: Image.Image, title: str, value: str):
+
+        draw = ImageDraw.Draw(base_img)
+        x = base_img.width / 2
+        y = cls.BIG_TITLE_START_X
+
+        draw.text((x, y), text=title, fill=cls.TITLE_COLOR,
+                  font=cls.BIG_TITLE_FONT, anchor="mm")
+
+        y += cls.BIG_TITLE_SIZE
+
+        draw.text((x, y), text=value, fill=cls.VALUE_COLOR,
+                  font=cls.BIG_VALUE_FONT, anchor="mm")
 
     @classmethod
     def generate_base_img(cls, new_cases: int):
