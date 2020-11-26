@@ -1,8 +1,17 @@
+# Built in modules
 from typing import Tuple, List
-from PIL import Image, ImageDraw, ImageFont
 import math
-from os import path, listdir
+from os import path, listdir, remove
 import random
+
+# Pillow
+from PIL import Image, ImageDraw, ImageFont
+
+# Mathplotlib
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import matplotlib.font_manager as font_manager
+import pylab
 
 
 class ImageGenerator:
@@ -23,19 +32,40 @@ class ImageGenerator:
 
     # - - - T I T L E S - A N D - V A L U E S - - - #
 
-    TITLE_COLOR = (255, 255, 255, 255)
-    VALUE_COLOR = (255, 255, 255, 255)
-    SUBTITLE_COLOR = (255, 255, 255, 255)
+    # Colors
+    TITLE_COLOR = (255, 255, 255)
+    VALUE_COLOR = (255, 255, 255)
+    SUBTITLE_COLOR = (255, 255, 255)
+    FIG_COLOR = (255, 255, 255)
+    BOTTOM_TEXT_COLOR = (255, 255, 255)
 
-    VALUE_TITLE_RATIO = 1.5  # value is 1.5 times bigger then title
+    # Font sizes
     BIG_TITLE_SIZE = 200
+    BIG_VALUE_SIZE = 300
     SMALL_TITLE_SIZE = 100
+    SMALL_VALUE_SIZE = 150
+    SMALL_SUBTITLE_SIZE = 75
+    BOTTOM_TEXT_SIZE = 25
 
-    BIG_TITLE_Y = 350
-    SMALL_TITLES_Y = 850
+    # Padding
+    PADDING_BETWEEN_BIG_TITLE_AND_VALUE = 135
+    PADDING_BETWEEN_SMALL_TITLE_AND_VALUE = 75
+    PADDING_BETWEEN_SMALL_VALUE_AND_SUBTITLE = 150
+    SMALL_TITLES_SIDE_PADDING = 200
+    BOTTOM_TEXT_PAD_FROM_BOTTOM = 10
 
-    PADDING_BETWEEN_TITLES = 350
-    MAX_SMALL_TITLES_IN_LINE = 3
+    # Placement
+    BIG_TITLE_Y = 50
+    GRAPH_Y = 600
+    SMALL_TITLES_Y = 1400
+
+    # - - - G R A P H - - - #
+
+    TICKS_ON_GRAPH = 4
+    TODAY_TICK_LABEL = "םויה"
+    X_DAYS_AGO_LABEL = "םימי %s ינפל"
+
+    FIG_SIZE = (6, 3)
 
     # - - -  F O N T S  - - - #
 
@@ -43,18 +73,121 @@ class ImageGenerator:
     TITLE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
     VALUE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Black.ttf")
     SUBTITLE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
+    BOTTOM_TEXT_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
+    GRAPH_FONT_NAME = "Heebo"
+    GRAPH_TITLE_WEIGHT = 800
+    GRAPH_TICKS_WEIGHT = 500
 
     # Load fonts
     BIG_TITLE_FONT = ImageFont.truetype(
         TITLE_FONT_PATH, size=BIG_TITLE_SIZE)
     BIG_VALUE_FONT = ImageFont.truetype(
-        VALUE_FONT_PATH, size=int(BIG_TITLE_SIZE * VALUE_TITLE_RATIO))
+        VALUE_FONT_PATH, size=BIG_VALUE_SIZE)
     SMALL_TITLE_FONT = ImageFont.truetype(
         TITLE_FONT_PATH, size=SMALL_TITLE_SIZE)
     SMALL_VALUE_FONT = ImageFont.truetype(
-        VALUE_FONT_PATH, size=int(SMALL_TITLE_SIZE * VALUE_TITLE_RATIO))
+        VALUE_FONT_PATH, size=SMALL_VALUE_SIZE)
     SMALL_SUBTITLE_FONT = ImageFont.truetype(
-        SUBTITLE_FONT_PATH, size=int(SMALL_TITLE_SIZE / VALUE_TITLE_RATIO))
+        SUBTITLE_FONT_PATH, size=SMALL_SUBTITLE_SIZE)
+    BOTTOM_TEXT_FONT = ImageFont.truetype(
+        BOTTOM_TEXT_FONT_PATH, size=BOTTOM_TEXT_SIZE)
+
+    @classmethod
+    def generate_tick_labels(cls, num_of_days):
+
+        ticks = list()
+        labels = list()
+
+        if cls.TICKS_ON_GRAPH >= 1:
+            ticks.append(num_of_days)
+            labels.append(cls.TODAY_TICK_LABEL)
+
+            if cls.TICKS_ON_GRAPH != 1:
+                cur_tick = 0
+                tick_jumps = int(num_of_days / (cls.TICKS_ON_GRAPH - 1))
+
+                while (cur_tick + tick_jumps <= num_of_days):
+                    cur_tick_days_ago = str(num_of_days-cur_tick)
+                    labels.append(cls.X_DAYS_AGO_LABEL.replace(
+                        '%s', cur_tick_days_ago))
+                    ticks.append(cur_tick)
+                    cur_tick += tick_jumps
+
+        return [ticks, labels]
+
+    @classmethod
+    def save_plot_daydata(cls, data: List, path, dpi=None, title: str = None):
+
+        # Load custom fonts
+        fonts = font_manager.findSystemFonts(fontpaths=cls.FONTS_FOLDER)
+        for font in fonts:
+            font_manager.fontManager.addfont(font)
+
+        _, ax = plt.subplots()
+
+        if title:
+            ax.set_title(title, fontname=cls.GRAPH_FONT_NAME,
+                         fontweight=cls.GRAPH_TITLE_WEIGHT)
+
+        # Set axes width
+        mpl.rcParams['axes.linewidth'] = 2
+
+        # Plot given data
+        plt.plot(data, c="k", linewidth=3,
+                 solid_capstyle="round", solid_joinstyle="round")
+
+        # Add arrows to axes
+        ax.plot(1, 0, ">k", transform=ax.get_yaxis_transform(), clip_on=False)
+        ax.plot(0, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False)
+
+        # Hide top and right axes
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        # Set (0,0) point to be the left bottom point in the graph
+        pylab.xlim(xmin=0)
+        pylab.ylim(ymin=0)
+
+        # Add custom ticks
+        [ticks, labels] = cls.generate_tick_labels(len(data))
+        plt.xticks(ticks=ticks, labels=labels,
+                   fontname=cls.GRAPH_FONT_NAME, fontweight=cls.GRAPH_TICKS_WEIGHT)
+        plt.yticks(fontname=cls.GRAPH_FONT_NAME,
+                   fontweight=cls.GRAPH_TICKS_WEIGHT)
+
+        # Set figure size
+        fig = plt.gcf()
+        fig.set_size_inches(cls.FIG_SIZE[0], cls.FIG_SIZE[1])
+
+        # Save the figure
+        plt.savefig(path, dpi=dpi)
+
+    @classmethod
+    def add_graph(cls, data: List, base_img: Image.Image, title=None):
+
+        TEMP_FILE_PATH = "TEMPFIG.png"
+
+        # Generate the figure, and load it to PIL.
+        cls.save_plot_daydata(data, TEMP_FILE_PATH, title=title, dpi=250)
+        graph = Image.open("tempfig.png").convert("L")
+        remove(TEMP_FILE_PATH)
+
+        # Create the mask layer
+        graph_mask = Image.new("L", size=base_img.size, color="white")
+
+        # Paste the graph onto the graph mask, in the desired location.
+        paste_x = int((graph_mask.width - graph.width) / 2)
+        paste_y = cls.GRAPH_Y
+        graph_mask.paste(graph, box=(paste_x, paste_y))
+
+        # Now, `graph_mask` represents the true black and white mask.
+        # It's time to composite it with the base image!
+
+        # Create a solid with the desired figure color
+        solid_graph = Image.new(
+            "RGBA", size=base_img.size, color=cls.FIG_COLOR)
+
+        return Image.composite(base_img, solid_graph, graph_mask)
 
     @classmethod
     def add_big_title(cls, base_img: Image.Image, title: str, value: str):
@@ -64,32 +197,31 @@ class ImageGenerator:
         y = cls.BIG_TITLE_Y
 
         draw.text((x, y), text=title, fill=cls.TITLE_COLOR,
-                  font=cls.BIG_TITLE_FONT, anchor="mm")
+                  font=cls.BIG_TITLE_FONT, anchor="ma")
 
-        y += cls.BIG_TITLE_SIZE
+        y += cls.PADDING_BETWEEN_BIG_TITLE_AND_VALUE
 
         draw.text((x, y), text=value, fill=cls.VALUE_COLOR,
-                  font=cls.BIG_VALUE_FONT, anchor="mm")
+                  font=cls.BIG_VALUE_FONT, anchor="ma")
 
     @classmethod
     def __add_small_title(cls, img: Image.Image, xy: Tuple[int, int], title: str, value: str, subtitle: str):
 
         draw = ImageDraw.Draw(img)
-
         x, y = xy
 
         draw.text((x, y), text=title, fill=cls.TITLE_COLOR,
-                  font=cls.SMALL_TITLE_FONT, anchor="mm")
+                  font=cls.SMALL_TITLE_FONT, anchor="ma")
 
-        y += cls.SMALL_TITLE_SIZE * 1.2
+        y += cls.PADDING_BETWEEN_SMALL_TITLE_AND_VALUE
 
         draw.text((x, y), text=value, fill=cls.VALUE_COLOR,
-                  font=cls.SMALL_VALUE_FONT, anchor="mm")
+                  font=cls.SMALL_VALUE_FONT, anchor="ma")
 
-        y += cls.SMALL_TITLE_SIZE
+        y += cls.PADDING_BETWEEN_SMALL_VALUE_AND_SUBTITLE
 
         draw.text((x, y), text=subtitle, fill=cls.SUBTITLE_COLOR,
-                  font=cls.SMALL_SUBTITLE_FONT, anchor="mm")
+                  font=cls.SMALL_SUBTITLE_FONT, anchor="ma")
 
     @classmethod
     def add_small_titles_row(cls,
@@ -98,8 +230,9 @@ class ImageGenerator:
                              values_list: List[int],
                              subtitles_list: List[int],
                              ):
-        x_jumps = img.width / len(titles_list)
-        x = x_jumps / 2
+        padding = cls.SMALL_TITLES_SIDE_PADDING
+        x_jumps = (img.width - padding) / len(titles_list)
+        x = (x_jumps + padding) / 2
         y = cls.SMALL_TITLES_Y
 
         for title, value, subtitle in zip(titles_list, values_list, subtitles_list):
@@ -196,3 +329,15 @@ class ImageGenerator:
             draw.line([p1, p2], fill=color, width=1)
 
         return img
+
+    @classmethod
+    def add_bottom_test(cls, img: Image.Image, text: str):
+
+        draw = ImageDraw.Draw(img)
+
+        x = img.width / 2
+        y = img.height - cls.BOTTOM_TEXT_PAD_FROM_BOTTOM
+
+        draw.text(xy=(x, y), text=text, font=cls.BOTTOM_TEXT_FONT,
+                  color=cls.BOTTOM_TEXT_COLOR, anchor="mb")
+
