@@ -162,3 +162,14 @@ class Covid19API:
         """ Compares the two day data objects, and returns an `DayDataDiff`
         instance. """
         return DayDataDiff(newest=newest, older=older)
+
+    @classmethod
+    def compare_last_two_days(cls, country: str):
+        """ Compares the data from today and yesterday,
+        and returns an `DayDataDiff` object. """
+
+        data = cls.get_stats(country, last_x_days=2)
+        today = data[0]
+        yesterday = data[1]
+
+        return cls.compare_day_data(today, yesterday)
