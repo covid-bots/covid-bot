@@ -106,7 +106,7 @@ class CovidStatsInstagramBot:
         return cls.CAPTION_TEMPLATE.replace("%d", date_str)
 
 
-if __name__ == "__main__":
+def main(*args, **kwwargs):
 
     TEMP_FILE = "TEMPIMG.jpg"
 
@@ -119,3 +119,7 @@ if __name__ == "__main__":
     CovidStatsInstagramBot.upload_image(TEMP_FILE, caption)
 
     remove(TEMP_FILE)
+
+
+if __name__ == "__main__":
+    main()
