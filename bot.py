@@ -14,7 +14,7 @@ class CovidStatsInstagramBot:
     COMPARE_X_DAYS = 60
 
     API_BASE_URL = "https://api.covid19api.com/dayone/country/"
-    SOCIALMEDIA_INFO_PATH = "login-info.json"
+    SOCIALMEDIA_INFO_PATH = "logininfo.json"
 
     BIG_TITLE = "םישדח םילוח"
     MIDDLE_TITLES = ["םיתמ", "תעכ םילוח", "ומילחה"]
