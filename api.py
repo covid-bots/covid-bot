@@ -1,7 +1,9 @@
+from exceptions import *
+import pylab
+import matplotlib.pyplot as plt
 from purl import URL
 import requests
-
-from exceptions import *
+import matplotlib as mpl
 
 
 class SingleDayData:
@@ -50,6 +52,41 @@ class SingleDayData:
     @property
     def date(self):
         return self.__raw_data_dict["Date"]
+
+
+class multipleDaysData:
+
+    def __init__(self, json_info):
+        self.__raw = json_info
+        self.__daydata = [SingleDayData(data) for data in json_info]
+        self.__daydelta = [
+            DayDataDiff(
+                self.__daydata[index],
+                self.__daydata[index-1]
+            )
+            for index in range(1, len(self.__daydata))
+        ]
+
+    def get_data_before_x_days(self, days: int):
+        return SingleDayData(self.__raw[-days])
+
+    def get_today(self,):
+        return self.get_data_before_x_days(1)
+
+    def get_yesterday(self,):
+        return self.get_data_before_x_days(2)
+
+    def get_deaths_list(self,):
+        return [daydata.deaths for daydata in self.__daydata]
+
+    def get_recovered_list(self,):
+        return [daydata.recovered_cases for daydata in self.__daydata]
+
+    def get_active_cases_list(self,):
+        return [daydata.active_cases for daydata in self.__daydata]
+
+    def get_cases_a_day_list(self,):
+        return [daydelta.confirmed_diff for daydelta in self.__daydelta]
 
 
 class DayDataDiff:
@@ -155,10 +192,7 @@ class Covid19API:
         if last_x_days:
             response_json = response_json[-last_x_days:]
 
-        response_json.reverse()
-
-        return [SingleDayData(day_data_dict)
-                for day_data_dict in response_json]
+        return multipleDaysData(response_json)
 
     @classmethod
     def get_today_stats(cls, country: str):
@@ -177,7 +211,4 @@ class Covid19API:
         and returns an `DayDataDiff` object. """
 
         data = cls.get_stats(country, last_x_days=2)
-        today = data[0]
-        yesterday = data[1]
-
-        return cls.compare_day_data(today, yesterday)
+        return cls.compare_day_data(data.get_today(), data.get_yesterday())
