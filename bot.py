@@ -2,7 +2,7 @@ from instabot import Bot as Instabot
 import json
 import requests
 from datetime import datetime
-from os import remove
+from os import remove, environ
 
 from exceptions import *
 from api import Covid19API
@@ -31,13 +31,14 @@ class CovidStatsInstagramBot:
         Instagram account saved in the login info file.
         """
 
-        # Load json from the login info file
-        with open(cls.SOCIALMEDIA_INFO_PATH) as f:
-            login_info = json.load(f)
-
         # Get Instagram username and password
-        insta_username = login_info["instagram"]["username"]
-        insta_password = login_info["instagram"]["password"]
+        insta_username = environ.get("COVID_INSTAGRAM_USERNAME")
+        insta_password = environ.get("COVID_INSTAGRAM_PASSWORD")
+
+        if (not insta_username) or (not insta_password):
+            raise ValueError(
+                "Environment variables not found.\nPlease set the environment variables 'COVID_INSTAGRAM_USERNAME' and 'COVID_INSTAGRAM_PASSWORD'."
+            )
 
         # Load the Instagram bot
         bot = Instabot()
