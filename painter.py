@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 from PIL import Image, ImageDraw, ImageFont
 import math
 from os import path, listdir
@@ -25,18 +25,24 @@ class ImageGenerator:
 
     TITLE_COLOR = (255, 255, 255, 255)
     VALUE_COLOR = (255, 255, 255, 255)
+    SUBTITLE_COLOR = (255, 255, 255, 255)
 
     VALUE_TITLE_RATIO = 1.5  # value is 1.5 times bigger then title
     BIG_TITLE_SIZE = 200
     SMALL_TITLE_SIZE = 100
 
-    BIG_TITLE_START_X = 350
+    BIG_TITLE_Y = 350
+    SMALL_TITLES_Y = 850
+
+    PADDING_BETWEEN_TITLES = 350
+    MAX_SMALL_TITLES_IN_LINE = 3
 
     # - - -  F O N T S  - - - #
 
     FONTS_FOLDER = path.join(ASSETS_FOLDER, "fonts")
     TITLE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
     VALUE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Black.ttf")
+    SUBTITLE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
 
     # Load fonts
     BIG_TITLE_FONT = ImageFont.truetype(
@@ -47,13 +53,15 @@ class ImageGenerator:
         TITLE_FONT_PATH, size=SMALL_TITLE_SIZE)
     SMALL_VALUE_FONT = ImageFont.truetype(
         VALUE_FONT_PATH, size=int(SMALL_TITLE_SIZE * VALUE_TITLE_RATIO))
+    SMALL_SUBTITLE_FONT = ImageFont.truetype(
+        SUBTITLE_FONT_PATH, size=int(SMALL_TITLE_SIZE / VALUE_TITLE_RATIO))
 
     @classmethod
     def add_big_title(cls, base_img: Image.Image, title: str, value: str):
 
         draw = ImageDraw.Draw(base_img)
         x = base_img.width / 2
-        y = cls.BIG_TITLE_START_X
+        y = cls.BIG_TITLE_Y
 
         draw.text((x, y), text=title, fill=cls.TITLE_COLOR,
                   font=cls.BIG_TITLE_FONT, anchor="mm")
@@ -62,6 +70,41 @@ class ImageGenerator:
 
         draw.text((x, y), text=value, fill=cls.VALUE_COLOR,
                   font=cls.BIG_VALUE_FONT, anchor="mm")
+
+    @classmethod
+    def __add_small_title(cls, img: Image.Image, xy: Tuple[int, int], title: str, value: str, subtitle: str):
+
+        draw = ImageDraw.Draw(img)
+
+        x, y = xy
+
+        draw.text((x, y), text=title, fill=cls.TITLE_COLOR,
+                  font=cls.SMALL_TITLE_FONT, anchor="mm")
+
+        y += cls.SMALL_TITLE_SIZE * 1.2
+
+        draw.text((x, y), text=value, fill=cls.VALUE_COLOR,
+                  font=cls.SMALL_VALUE_FONT, anchor="mm")
+
+        y += cls.SMALL_TITLE_SIZE
+
+        draw.text((x, y), text=subtitle, fill=cls.SUBTITLE_COLOR,
+                  font=cls.SMALL_SUBTITLE_FONT, anchor="mm")
+
+    @classmethod
+    def add_small_titles_row(cls,
+                             img: Image.Image,
+                             titles_list: List[int],
+                             values_list: List[int],
+                             subtitles_list: List[int],
+                             ):
+        x_jumps = img.width / len(titles_list)
+        x = x_jumps / 2
+        y = cls.SMALL_TITLES_Y
+
+        for title, value, subtitle in zip(titles_list, values_list, subtitles_list):
+            cls.__add_small_title(img, (x, y), title, value, subtitle)
+            x += x_jumps
 
     @classmethod
     def generate_base_img(cls, new_cases: int):
