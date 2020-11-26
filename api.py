@@ -60,6 +60,14 @@ class DayDataDiff:
         self.__newest = newest
         self.__older = older
 
+    @property
+    def new(self):
+        return self.__newest
+
+    @property
+    def old(self):
+        return self.__older
+
     @staticmethod
     def __genrate_diff(newest_data, older_data):
         return newest_data - older_data
