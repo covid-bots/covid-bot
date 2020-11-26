@@ -1,0 +1,5 @@
+requests
+instabot
+purl
+pillow
+matplotlib
