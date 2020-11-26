@@ -1,9 +1,7 @@
 from exceptions import *
-import pylab
-import matplotlib.pyplot as plt
+
 from purl import URL
 import requests
-import matplotlib as mpl
 
 
 class SingleDayData:
