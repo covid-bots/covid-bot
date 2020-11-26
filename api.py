@@ -158,6 +158,7 @@ class Covid19API:
 
     MAIN_URL = URL("https://api.covid19api.com")
 
+    @staticmethod
     def __request(url: URL) -> list:
         """ Make an http request, and check for errors. """
 
