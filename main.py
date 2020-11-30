@@ -45,7 +45,7 @@ class CovidStatsInstagramBot:
         bot.login(username=insta_username, password=insta_password)
 
         # upload the given photo
-        bot.upload_photo(img_path, caption=caption)
+        bot.upload_photo(img_path, caption=caption, options={"rename": False})
 
     @classmethod
     def __generate_delta_subtitle(cls, amount: int):
@@ -53,7 +53,7 @@ class CovidStatsInstagramBot:
         if amount == 0:
             return cls.SUBTITLE_NO_CHANGE
 
-        string = cls.SUBTITLE_TEMPLATE.replace("%n", str(amount))
+        string = cls.SUBTITLE_TEMPLATE.replace("%n", str(abs(amount)))
 
         if amount > 0:
             return string.replace("%=", "+")
@@ -106,7 +106,7 @@ class CovidStatsInstagramBot:
         return cls.CAPTION_TEMPLATE.replace("%d", date_str)
 
 
-def main(*args, **kwwargs):
+def main(*args, **kwargs):
 
     TEMP_FILE = "TEMPIMG.jpg"
 
