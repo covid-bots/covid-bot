@@ -3,6 +3,7 @@ import json
 import requests
 from datetime import datetime
 from os import remove, environ
+import logging
 
 from exceptions import *
 from api import Covid19API
@@ -24,6 +25,8 @@ class CovidStatsInstagramBot:
     GRAPH_TITLE = "םינורחאה םיישדוחב ,םויב םישדח םילוח :ףרג"
     BOTTOM_TEXT_TEMPLATE = "%d | @covid_israel | ישילש דצ ידי לע קפוסמו ,ימשר וניא עדימה"
     CAPTION_TEMPLATE = "מצב נגיף הקורונה בישראל - %d 🦠😷🏥\nשמירה על ההנחיות מצילה חיים. רק כך נוכל לחזור לשגרה! 🙂"
+
+    TEMP_IMAGE_NAME = "TEMPIMG.jpg"
 
     @classmethod
     def upload_image(cls, img_path: str, caption: str = None):
@@ -101,25 +104,80 @@ class CovidStatsInstagramBot:
 
     @classmethod
     def get_caption(cls):
+        """ Generate caption for the Instagram post. """
+
         date = datetime.today()
         date_str = date.strftime("%d/%m/%Y")
         return cls.CAPTION_TEMPLATE.replace("%d", date_str)
 
+    @classmethod
+    def genereate_and_upload(cls):
+        """ Generate a new image, and upload it to Instagram. """
 
-def main(*args, **kwargs):
+        # Generate and save the covid image.
+        img = CovidStatsInstagramBot.get_image().convert("RGB")
+        img.save(cls.TEMP_IMAGE_NAME)
 
-    TEMP_FILE = "TEMPIMG.jpg"
+        # Upload the image to instagram
+        caption = CovidStatsInstagramBot.get_caption()
+        CovidStatsInstagramBot.upload_image(cls.TEMP_IMAGE_NAME, caption)
 
-    # Generate and save the covid image.
-    img = CovidStatsInstagramBot.get_image().convert("RGB")
-    img.save(TEMP_FILE)
+        remove(cls.TEMP_IMAGE_NAME)
 
-    # Upload the image to instagram
-    caption = CovidStatsInstagramBot.get_caption()
-    CovidStatsInstagramBot.upload_image(TEMP_FILE, caption)
+    @classmethod
+    def upload_if_new_data(cls):
 
-    remove(TEMP_FILE)
+        logging.info("Checking for new information...")
+
+        data = Covid19API.get_stats(cls.COUNTRY, last_x_days=1)
+        json_data = {"date": data.get_today().date}
+
+        if not DataStorageManager.diff_from_saved_data(json_data):
+            # If there is no new data...
+            logging.info("No new data found.")
+            return
+
+        # If there is new data
+        logging.info("New data found, generating and uploading image.")
+        cls.genereate_and_upload()
+        DataStorageManager.save_data(json_data)
+
+
+class DataStorageManager:
+
+    DATA_FILE = "PREV_DATA.json"
+
+    @classmethod
+    def save_data(cls, data: dict):
+        """ Saves the given data dict as a json file,
+        in the file specified with the `DATA_FILE` property.
+        """
+
+        with open(cls.DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+
+    @classmethod
+    def load_data(cls):
+        """ Returns the data in the file specified with the `DATA_FILE`
+        property. """
+
+        try:
+            with open(cls.DATA_FILE) as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return None
+
+    @classmethod
+    def diff_from_saved_data(cls, data: dict):
+        """ Returns a boolean value. `True` if the given data is different
+        and does not match the saved data (or if there is no saved data),
+        and `False` if the saved data matches the given data. """
+
+        saved_data = cls.load_data()
+        return not saved_data == data
 
 
 if __name__ == "__main__":
-    main()
+    logging.basicConfig(filename="info.log", level=logging.INFO,
+                        format="[%(asctime)s] (%(levelname)s) | %(message)s")
+    CovidStatsInstagramBot.upload_if_new_data()

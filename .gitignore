@@ -138,5 +138,6 @@ dmypy.json
 cython_debug/
 
 # Custom
-logininfo.json
+PREV_DATA.json
 config/
+.vscode/
