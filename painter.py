@@ -169,7 +169,7 @@ class ImageGenerator:
 
         # Generate the figure, and load it to PIL.
         cls.save_plot_daydata(data, TEMP_FILE_PATH, title=title, dpi=250)
-        graph = Image.open("tempfig.png").convert("L")
+        graph = Image.open(TEMP_FILE_PATH).convert("L")
         remove(TEMP_FILE_PATH)
 
         # Create the mask layer
@@ -340,4 +340,3 @@ class ImageGenerator:
 
         draw.text(xy=(x, y), text=text, font=cls.BOTTOM_TEXT_FONT,
                   color=cls.BOTTOM_TEXT_COLOR, anchor="mb")
-
