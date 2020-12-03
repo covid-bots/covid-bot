@@ -4,10 +4,22 @@ import requests
 from datetime import datetime
 from os import remove, environ
 import logging
+from logging.handlers import TimedRotatingFileHandler
 
 from exceptions import *
 from api import Covid19API
 from painter import ImageGenerator
+
+
+formatter = logging.Formatter("[%(asctime)s] (%(levelname)s) | %(message)s")
+
+file_handler = TimedRotatingFileHandler(
+    "main.log", when="midnight", backupCount=3)
+file_handler.setFormatter(formatter)
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(file_handler)
 
 
 class CovidStatsInstagramBot:
@@ -127,18 +139,18 @@ class CovidStatsInstagramBot:
     @classmethod
     def upload_if_new_data(cls):
 
-        logging.info("Checking for new information...")
+        logger.info("Checking for new information...")
 
         data = Covid19API.get_stats(cls.COUNTRY, last_x_days=1)
         json_data = {"date": data.get_today().date}
 
         if not DataStorageManager.diff_from_saved_data(json_data):
             # If there is no new data...
-            logging.info("No new data found.")
+            logger.info("No new data found.")
             return
 
         # If there is new data
-        logging.info("New data found, generating and uploading image.")
+        logger.info("New data found, generating and uploading image.")
         cls.genereate_and_upload()
         DataStorageManager.save_data(json_data)
 
@@ -178,6 +190,4 @@ class DataStorageManager:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="info.log", level=logging.INFO,
-                        format="[%(asctime)s] (%(levelname)s) | %(message)s")
     CovidStatsInstagramBot.upload_if_new_data()

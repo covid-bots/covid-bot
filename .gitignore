@@ -141,3 +141,4 @@ cython_debug/
 PREV_DATA.json
 config/
 .vscode/
+*.log*
