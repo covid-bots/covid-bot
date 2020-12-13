@@ -107,6 +107,24 @@ class multipleDaysData:
     def get_cases_a_day_list(self,):
         return [daydelta.confirmed_diff for daydelta in self.__daydelta]
 
+    def get_r_values(self,):
+        """ Calculated using the formula described in:
+        https://www.ynet.co.il/health/article/Bk5KKJOYv
+        """
+
+        week_averages = self.get_x_cases_a_day_average_list(7)
+        days = len(week_averages) - 7
+        r_list = list()
+
+        for cur_index in range(days):
+            cur_week = week_averages[cur_index + 7]
+            prev_week = week_averages[cur_index]
+
+            cur_r_value = (cur_week / prev_week) ** (4/7)
+            r_list.append(cur_r_value)
+
+        return r_list
+
 
 class DayDataDiff:
 
