@@ -3,3 +3,4 @@ instabot>=0.117.0
 purl>=1.5
 pillow>=8.0.1
 matplotlib>=3.3.3
+python-bidi>=0.4.2

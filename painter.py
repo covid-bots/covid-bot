@@ -1,8 +1,10 @@
 # Built in modules
+from bidi.algorithm import get_display
 from typing import Tuple, List
 import math
 from os import path, listdir, remove
 import random
+import logging
 
 # Pillow
 from PIL import Image, ImageDraw, ImageFont
@@ -12,6 +14,9 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.font_manager as font_manager
 import pylab
+
+
+logger = logging.getLogger(__name__)
 
 
 class ImageGenerator:
@@ -340,3 +345,161 @@ class ImageGenerator:
 
         draw.text(xy=(x, y), text=text, font=cls.BOTTOM_TEXT_FONT,
                   color=cls.BOTTOM_TEXT_COLOR, anchor="mb")
+
+
+class PosterText:
+    """
+    Represents a collection of words, sencenses, or lines. Has a method called
+    `to_image` that generates a special image of the words, where each of the
+    words has the same width.
+
+    Has two main methods:
+    ---------------------
+    1.  `set_truetype_font()` - sets the font of the poster
+    2.  `to_image()` - generates the poster image
+    """
+
+    def __init__(self, *arguments: List):
+        self._lines = self.__arguments_to_lines(arguments)
+        self._font_args = list()
+        self._font_kwargs = list()
+
+    def __arguments_to_lines(self, arguments: List):
+        """ Recives a list of arguments.
+        Saves the strings and the lists only! """
+
+        lines = list()
+        for argument in arguments:
+            if isinstance(argument, str):
+                lines.append(argument)
+            elif isinstance(argument, list):
+                lines += argument
+            else:
+                logger.warning(
+                    f"{argument} is not a supported argument. Ignoring...")
+
+        return lines
+
+    def set_truetype_font(self, *args, **kwargs):
+        """ Saves the argument and keyword arguments that are passed, and uses
+        them when generating the font of the poster image. """
+
+        if "size" in kwargs:
+            logger.warning(
+                "Setting a poster font should not receive a size. Ignoring...")
+            del kwargs["size"]
+
+        self._font_args = args
+        self._font_kwargs = kwargs
+
+    def __build_font(self, size: int):
+        """ Returns a font object, with the given size. """
+
+        return ImageFont.truetype(*self._font_args, **self._font_kwargs, size=size)
+
+    def __check_font_size(self,
+                          font: ImageFont.ImageFont,
+                          text: str,
+                          target_size: int,
+                          match_area: float = 1,
+                          ) -> int:
+        """ Returns `-1`, `0` or `1` depending on the relation between the given
+        `target_size` and the actual size of the given font.
+
+        *  1  - if the font is LARGER then the target value
+        *  0  - if the font size and the target value are the same
+        * -1  - if the font is SMALLER then the target value
+        """
+
+        width = font.getsize(text)[0]
+        if abs(target_size - width) <= match_area:
+            return 0   # a match
+        elif width > target_size:
+            return 1   # font is LARGER then expected
+        else:
+            return -1  # font is SMALLER then expected
+
+    def __get_font(self,
+                   text: str,
+                   target_size: int,
+                   min_size: int = 1,
+                   max_size: int = None,
+                   ) -> ImageFont.ImageFont:
+        """ Recives the text, and returns a font object that matches the given text,
+        with the matching size. """
+
+        if max_size is None:
+
+            new_size = min_size * 2
+            font = self.__build_font(new_size)
+            if self.__check_font_size(font, text, target_size) == -1:
+                # if the generated font is smaller then needed
+                return self.__get_font(text, target_size, min_size=new_size)
+            else:
+                # if larger (or equal)
+                return self.__get_font(text, target_size,
+                                       min_size=min_size, max_size=new_size)
+
+        else:
+            # If both min and max values are given
+
+            new_size = int(sum([max_size, min_size]) / 2)
+            font = self.__build_font(new_size)
+
+            if (self.__check_font_size(font, text, target_size) == 0
+                    or abs(min_size-max_size) <= 1):
+                # a match found! return the current font
+                return font
+
+            elif self.__check_font_size(font, text, target_size) == -1:
+                # if the generated font is smaller then needed
+                return self.__get_font(text, target_size,
+                                       min_size=new_size, max_size=max_size)
+
+            elif self.__check_font_size(font, text, target_size) == 1:
+                # if the generated font is larger then needed
+                return self.__get_font(text, target_size,
+                                       min_size=min_size, max_size=new_size)
+
+    def to_image(self, width: int, padding: int = 0, color="black",):
+        """ Generates and returns a PIL image object, representing the poster text. """
+        return self.__to_image(
+            width=width,
+            padding=padding,
+            color=color,
+            left_lines=self._lines,
+            cur_height=0,
+        )
+
+    def __to_image(self,
+                   width: int,
+                   padding: int,
+                   color,
+
+                   # recursize arguments
+                   left_lines: List[str],
+                   cur_height: int,
+                   ):
+
+        if len(left_lines) == 0:
+            # Generate the image - empty transparent
+            return Image.new("RGBA", (width, cur_height), color=(255, 255, 255, 0))
+
+        line = get_display(left_lines.pop(0))
+        font = self.__get_font(text=line, target_size=width)
+
+        height = font.getsize(line)[1]
+        if left_lines:
+            # If current line is not the last one
+            height += padding
+
+        image = self.__to_image(
+            width=width,
+            padding=padding,
+            color=color,
+            left_lines=left_lines,
+            cur_height=cur_height + height,
+        )
+        draw = ImageDraw.Draw(image)
+        draw.text((0, cur_height), line, fill=color, font=font)
+        return image
