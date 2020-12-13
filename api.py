@@ -93,6 +93,17 @@ class multipleDaysData:
     def get_active_cases_list(self,):
         return [daydata.active_cases for daydata in self.__daydata]
 
+    def get_x_cases_a_day_average_list(self, last_x_days: int,):
+        result_len = len(self.__daydelta) - last_x_days + 1
+        result_list = list()
+
+        for cur_start_index in range(result_len):
+            cur_sum = sum(self.__daydelta[cur_start_index + cur_index].confirmed_diff
+                          for cur_index in range(last_x_days))
+            result_list.append(cur_sum / last_x_days)
+
+        return result_list
+
     def get_cases_a_day_list(self,):
         return [daydelta.confirmed_diff for daydelta in self.__daydelta]
 
