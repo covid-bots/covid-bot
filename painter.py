@@ -362,7 +362,12 @@ class PosterText:
     2.  `to_image()` - generates the poster image
     """
 
-    def __init__(self, *arguments: List):
+    def __init__(
+            self,
+            *arguments: List,
+            string_manager=StringManager()
+    ):
+        self._string_manager = string_manager
         self._lines = self.__arguments_to_lines(arguments)
         self._font_args = list()
         self._font_kwargs = list()
@@ -381,7 +386,7 @@ class PosterText:
                 logger.warning(
                     f"{argument} is not a supported argument. Ignoring...")
 
-        return lines
+        return [self._string_manager.convert(line) for line in lines]
 
     def set_truetype_font(self, *args, **kwargs):
         """ Saves the argument and keyword arguments that are passed, and uses
@@ -488,7 +493,7 @@ class PosterText:
             # Generate the image - empty transparent
             return Image.new("RGBA", (width, cur_height), color=(255, 255, 255, 0))
 
-        line = get_display(left_lines.pop(0))
+        line = left_lines.pop(0)
         font = self.__get_font(text=line, target_size=width)
 
         height = font.getsize(line)[1]
