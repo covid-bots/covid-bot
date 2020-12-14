@@ -1,13 +1,13 @@
 # Built in modules
 from bidi.algorithm import get_display
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 import math
 import os
 import random
 import logging
 
 # Pillow
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 # Mathplotlib
 import matplotlib.pyplot as plt
@@ -15,6 +15,8 @@ import matplotlib as mpl
 import matplotlib.font_manager as font_manager
 import pylab
 
+# My code
+from translator import StringManager
 
 logger = logging.getLogger(__name__)
 
@@ -504,3 +506,274 @@ class PosterText:
         draw = ImageDraw.Draw(image)
         draw.text((0, cur_height), line, fill=color, font=font)
         return image
+
+
+class SingleDataPoster:
+
+    ASSETS_PATH = os.path.join("assets", "fa-svgs")
+    ARROW_UP_ICON = Image.open(os.path.join(
+        ASSETS_PATH, "arrow-alt-circle-up-solid.png"))
+    ARROW_DOWN_ICON = ImageOps.flip(ARROW_UP_ICON)
+    NO_CHANGE_ICON = Image.open(os.path.join(
+        ASSETS_PATH, "no-change-circle-solid.png"))
+
+    def __init__(self,
+                 title: str,
+                 now: int,
+                 prev: int,
+                 string_manager: StringManager = StringManager(),
+                 ):
+        self.string_manager = string_manager
+
+        self._title = self.string_manager.convert(title)
+        self._now = now
+        self._prev = prev
+
+    @property
+    def title(self,) -> str:
+        return self._title
+
+    @property
+    def now(self,) -> int:
+        return self._now
+
+    @property
+    def prev(self,) -> int:
+        return self._prev
+
+    @property
+    def delta(self,) -> int:
+        return self.now - self.prev
+
+    @property
+    def delta_str(self,) -> str:
+        return self.string_manager.delta_str(self.delta)
+
+    @property
+    def delta_precentage(self,) -> float:
+        if self.prev == 0:
+            return None
+
+        one_precentage = self.prev / 100
+        return self.delta / one_precentage
+
+    @property
+    def delta_precentage_str(self,):
+        if self.delta_precentage is None:
+            return self.string_manager.unavailable
+        return f"{abs(self.delta_precentage):.1f}%"
+
+    def to_image(self,
+                 data_font: ImageFont.ImageFont,
+                 title_font: ImageFont.ImageFont = None,
+                 alter_font: ImageFont.ImageFont = None,
+
+                 width=None,  # None = calculate automatically
+                 color="black",
+
+                 pad_title: int = 0,
+                 pad_data: int = 0,
+
+                 draw_line: bool = True,
+                 line_length: int = None,  # None = max width.
+                 line_width: int = 1,
+
+                 icon_size: int = None,  # None = do not resize
+                 pad_icon: int = 0,  # padding between icon and alter text
+                 ):
+
+        if title_font is None:
+            title_font = data_font
+        if alter_font is None:
+            alter_font = data_font
+
+        if width is None:
+            width = self.__calc_image_width(
+                data_font=data_font,
+                title_font=title_font,
+                alter_font=alter_font,
+                draw_line=draw_line,
+                line_length=line_length,
+                icon_size=icon_size,
+                pad_icon=pad_icon,
+            )
+
+        height = self.__calc_image_height(
+            data_font=data_font,
+            title_font=title_font,
+            alter_font=alter_font,
+            pad_title=pad_title,
+            pad_data=pad_data,
+            icon_size=icon_size,
+        )
+
+        # Create the image
+        image = Image.new("RGBA", size=(width, height),
+                          color=(255, 255, 255, 0))
+        draw = ImageDraw.Draw(image)
+
+        x = int(width/2)
+        y = 0
+
+        # Add title to image
+        draw.text((x, y), self.title, font=title_font, fill=color, anchor="ma")
+        y += title_font.getsize(self.title)[1]
+        y += pad_title
+
+        # Add data to image
+        draw.text((x, y), str(self.now), font=data_font,
+                  fill=color, anchor="ma")
+        y += data_font.getsize(str(self.now))[1]
+        y += int(pad_data / 2)
+
+        # Add line to image, if needed
+        if draw_line:
+            if line_length is None:
+                line_x_start = 0
+                line_x_end = width
+            else:
+                line_x_start = int((width - line_length) / 2)
+                line_x_end = line_x_start + line_length
+
+            draw.line((line_x_start, y, line_x_end, y),
+                      fill=color, width=line_width)
+        y += int(pad_data / 2)
+
+        # Add alter data to image
+        alter_img = self.alter_image(
+            font=alter_font, color=color, icon_size=icon_size, pad_icon=pad_icon)
+        x = int((width - alter_img.width) / 2)
+        image.paste(alter_img, box=(x, y))
+
+        return image
+
+    def __calc_image_height(self,
+                            data_font: ImageFont.ImageFont,
+                            title_font: ImageFont.ImageFont,
+                            alter_font: ImageFont.ImageFont,
+                            pad_title: int,
+                            pad_data: int,
+                            icon_size: Optional[int]):
+        alter_height = self.__calc_alter_height(
+            font=alter_font, icon_size=icon_size
+        )
+
+        data_height = data_font.getsize(str(self.now))[1]
+        title_height = title_font.getsize(self.title)[1]
+
+        return math.ceil(sum([
+            alter_height,
+            data_height,
+            title_height,
+            pad_title,
+            pad_data,
+        ]))
+
+    def alter_image(self,
+                    font: ImageFont.ImageFont,
+                    color="black",
+                    icon_size: int = None,  # None = do not resize
+                    pad_icon: int = 0,  # padding between icon and alter text
+                    ):
+
+        size = (self.__calc_alter_width(font=font, icon_size=icon_size, pad_icon=pad_icon),
+                self.__calc_alter_height(font=font, icon_size=icon_size))
+
+        image = Image.new("RGBA", color=(255, 255, 255, 0), size=size)
+
+        # Load the icon
+        icon = self.__get_matching_icon(color=color)
+        if icon_size is not None:
+            # Resize if needed
+            if isinstance(icon_size, int):
+                icon_size = (icon_size, icon_size)
+            icon = icon.resize(icon_size)
+
+        # Paste icon in the middle
+        x = int((image.width - icon.width) / 2)
+        y = int((image.height - icon.height) / 2)
+        image.paste(icon, box=(x, y))
+
+        # Generate draw object
+        draw = ImageDraw.Draw(image)
+
+        # Paste left text
+        x = int(((image.width - icon.width) / 2) - pad_icon)
+        y = int(image.height / 2)
+        draw.text((x, y), self.delta_str,
+                  fill=color, font=font, anchor="rm")
+
+        # Paste right text
+        x = int(((image.width + icon.width) / 2) + pad_icon)
+        draw.text((x, y), self.delta_precentage_str,
+                  fill=color, font=font, anchor="lm")
+
+        return image
+
+    def __get_matching_icon(self, color=None,) -> Image.Image:
+        if self.delta == 0:
+            icon = self.NO_CHANGE_ICON.copy()
+        elif self.delta > 0:
+            icon = self.ARROW_UP_ICON.copy()
+        else:
+            icon = self.ARROW_DOWN_ICON.copy()
+
+        # Add color to the icon
+        if color is not None:
+            color_img = Image.new("RGB", size=icon.size, color=color)
+            color_img.putalpha(icon.getchannel('A'))
+            icon = color_img
+
+        return icon
+
+    def __calc_alter_width(self,
+                           font: ImageFont.ImageFont,
+                           icon_size: int,  # None = do not resize
+                           pad_icon: int,  # padding between icon and alter text
+                           ) -> int:
+        if icon_size is None:
+            icon_size = self.ARROW_UP_ICON.width
+
+        alter_width = icon_size
+        alter_width += pad_icon * 2
+        alter_width += max(
+            font.getsize(self.delta_str)[0],
+            font.getsize(self.delta_precentage_str)[0]
+        ) * 2
+
+        return math.ceil(alter_width)
+
+    def __calc_alter_height(self, font: ImageFont.ImageFont, icon_size: int) -> int:
+        if icon_size is None:
+            icon_size = self.__get_matching_icon().height
+
+        return math.ceil(max(
+            icon_size,
+            font.getsize(self.delta_str)[1],
+            font.getsize(self.delta_precentage_str)[1],
+        ))
+
+    def __calc_image_width(self,
+                           data_font: ImageFont.ImageFont,
+                           title_font: ImageFont.ImageFont,
+                           alter_font: ImageFont.ImageFont,
+                           draw_line: bool,
+                           line_length: Optional[int],
+                           icon_size: Optional[int],
+                           pad_icon: int,
+                           ) -> int:
+
+        data_width = data_font.getsize(str(self.now))[0]
+        title_width = title_font.getsize(self.title)[0]
+        alter_width = self.__calc_alter_width(
+            font=alter_font, icon_size=icon_size, pad_icon=pad_icon)
+
+        if line_length is None:
+            line_length = 0
+
+        return math.ceil(max([
+            data_width,
+            title_width,
+            line_length,
+            alter_width,
+        ]))
