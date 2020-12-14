@@ -819,7 +819,13 @@ class NewImageGenerator:
     def _precentage_of_height(self, value: float):
         return int(self._image.height * value)
 
-    def get_background_color(self, r_value: int):
+    def add_background(self, r_value: float):
+        background = Image.new("RGBA", size=self.image.size,
+                               color=self._calc_background_color(r_value))
+        background.alpha_composite(self.image)
+        self._update_image(background)
+
+    def _calc_background_color(self, r_value: float):
         """ Returns a color that represents the current R value.
         If the R value is high, the color will red, and if its low, it will slowly
         transform into orange -> yellow -> green -> blue.
