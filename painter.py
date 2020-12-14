@@ -782,3 +782,74 @@ class SingleDataPoster:
             line_length,
             alter_width,
         ]))
+
+
+class NewImageGenerator:
+
+    POSTER_TEXT_COLOR = "#424242"
+    POSTER_FONT_PATH = os.path.join("assets", "fonts", "Heebo-Black.ttf")
+    POSTER_WIDTH = 0.35               # Perecentage - 1 is the whole width of the image
+    POSTER_PADDING_FROM_SIDES = 0.25  # Perecentage - 1 is the whole width of the image
+    POSTER_PADDING_TITLES = -0.033    # Perecentage - 1 is the whole height of the image
+
+    def __init__(self, base_img: Image.Image):
+        self._image = base_img
+
+    @property
+    def image(self,):
+        return self._image.copy()
+
+    def _update_image(self, img: Image.Image):
+        self._image = img
+
+    def _precentage_of_width(self, value: float):
+        return int(self._image.width * value)
+
+    def _precentage_of_height(self, value: float):
+        return int(self._image.height * value)
+
+    def add_poster_title(
+        self,
+        poster: PosterText,
+
+        y_relative: float = 0.5,
+        # 0 is the top, 1/2 is the middle and 1 is the bottom.
+        # middle is the default (:
+
+        side: str = "m"
+    ):
+
+        # Assert good `side` value
+        if not isinstance(side, str):
+            raise TypeError("Poster `side` should be a one character string.")
+        if len(side) != 1:
+            raise ValueError("Poster `side` should be a one character string.")
+
+        # Set `x` value depending on the `side`
+        if side == "l":
+            x = self._precentage_of_width(self.POSTER_PADDING_FROM_SIDES)
+        elif side == "m":
+            x = self._precentage_of_width(0.5)
+        elif side == "r":
+            x = self.image.width - \
+                self._precentage_of_width(self.POSTER_PADDING_FROM_SIDES)
+        else:
+            raise ValueError(
+                "Poster `side` should be assembled using the characters `l` (left), `m` (middle) and `r` (right) only.")
+
+        # Set font of title
+        poster.set_truetype_font(self.POSTER_FONT_PATH)
+
+        # Generate poster image
+        poster_img = poster.to_image(
+            width=self._precentage_of_width(self.POSTER_WIDTH),
+            color=self.POSTER_TEXT_COLOR,
+            padding=self._precentage_of_height(self.POSTER_PADDING_TITLES)
+        )
+
+        x -= int(poster_img.width / 2)
+        y = self._precentage_of_height(y_relative) - int(poster_img.height / 2)
+
+        img = self.image
+        img.paste(poster_img, box=(x, y), mask=poster_img)
+        self._update_image(img)
