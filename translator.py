@@ -2,6 +2,7 @@ import babel
 import babel.languages
 from bidi.algorithm import get_display
 from googletrans import Translator
+from typing import Union
 
 
 class Country:
@@ -70,7 +71,10 @@ class StringManager:
         self.__translator = Translator()
         self.__dest_lang = dest_lang
 
-    def config_country_translator(self, country: Country) -> None:
+    def config_country_translator(self, country: Union[Country, str]) -> None:
+        if not isinstance(country, Country):
+            country = Country(country)
+
         self.config_translator(country.lang_code)
 
     @staticmethod
