@@ -792,6 +792,17 @@ class NewImageGenerator:
     POSTER_PADDING_FROM_SIDES = 0.25  # Perecentage - 1 is the whole width of the image
     POSTER_PADDING_TITLES = -0.033    # Perecentage - 1 is the whole height of the image
 
+    BACKGROUND_COLORS = {
+        # Keys are R values.
+        # See method `get_background_color` for more information!
+        0.50: (24,  205, 244),  # Light blue
+        0.75: (113, 248, 90),   # Light green
+        1.00: (191, 248, 18),   # Green, starts to became orange
+        1.25: (248, 170, 18),   # Orange
+        1.50: (247, 71,  36),   # Red
+        2.50: (166, 25,  25),   # Dark red
+    }
+
     def __init__(self, base_img: Image.Image):
         self._image = base_img
 
@@ -807,6 +818,77 @@ class NewImageGenerator:
 
     def _precentage_of_height(self, value: float):
         return int(self._image.height * value)
+
+    def get_background_color(self, r_value: int):
+        """ Returns a color that represents the current R value.
+        If the R value is high, the color will red, and if its low, it will slowly
+        transform into orange -> yellow -> green -> blue.
+        Uses the `BACKGROUND_COLORS` dict
+        """
+
+        low_neighbor = None
+        high_neighbor = None
+
+        color_numbers = list(self.BACKGROUND_COLORS.keys())
+        color_numbers.sort()
+
+        for cur_color_i, cur_color_num in enumerate(color_numbers):
+            if r_value <= cur_color_num:
+                low_neighbor = cur_color_i - 1
+                break
+
+        # If the given num is lower then the minimum color num
+        if cur_color_i == 0:
+            return self.BACKGROUND_COLORS[color_numbers[0]]
+
+        # If the given num is higher then the maximum color num
+        if low_neighbor == None:
+            return self.BACKGROUND_COLORS[color_numbers[-1]]
+
+        # - - - - - - - - - - - - - - - - - - - #
+        # If the given num is somewhere between #
+
+        high_neighbor = color_numbers[low_neighbor + 1]
+        low_neighbor = color_numbers[low_neighbor]
+
+        high_neighbor_color = self.BACKGROUND_COLORS[high_neighbor]
+        low_neighbor_color = self.BACKGROUND_COLORS[low_neighbor]
+
+        r_fixed = r_value - low_neighbor
+        neighbors_delta = high_neighbor - low_neighbor
+
+        high_neighbor_force = r_fixed / neighbors_delta
+        low_neighbor_force = 1 - high_neighbor_force
+
+        new_color = [
+            int(
+                (low_color_elem * low_neighbor_force) +
+                (high_color_elem * high_neighbor_force)
+            )
+            for low_color_elem, high_color_elem in zip(low_neighbor_color, high_neighbor_color)
+        ]
+
+        return tuple(new_color)
+
+    def test_background_gradint(self, from_: float, to: float, jumps: float = 0.01):
+
+        width = math.ceil((to - from_) / jumps)
+        height = int(width / 5)
+
+        img = Image.new("RGB", (width, height))
+        draw = ImageDraw.Draw(img)
+
+        for cur_pixel in range(width):
+
+            cur_r = from_ + (jumps * cur_pixel)
+            color = self.get_background_color(cur_r)
+
+            p1 = (cur_pixel, 0)
+            p2 = (cur_pixel, height)
+
+            draw.line([p1, p2], fill=color, width=1)
+
+        return img
 
     def add_poster_title(
         self,
