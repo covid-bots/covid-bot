@@ -4,3 +4,5 @@ purl>=1.5
 pillow>=8.0.1
 matplotlib>=3.3.3
 python-bidi>=0.4.2
+googletrans>=3.0.0
+babel>=2.9.0
