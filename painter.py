@@ -2,7 +2,7 @@
 from bidi.algorithm import get_display
 from typing import Tuple, List
 import math
-from os import path, listdir, remove
+import os
 import random
 import logging
 
@@ -32,8 +32,9 @@ class ImageGenerator:
         10_000: (140, 29,  20),
     }
 
-    ASSETS_FOLDER = path.join("assets")
-    RANDOM_BACKGROUND_IMAGES_FOLDER = path.join(ASSETS_FOLDER, "backgrounds")
+    ASSETS_FOLDER = os.path.join("assets")
+    RANDOM_BACKGROUND_IMAGES_FOLDER = os.path.join(
+        ASSETS_FOLDER, "backgrounds")
 
     # - - - T I T L E S - A N D - V A L U E S - - - #
 
@@ -74,11 +75,11 @@ class ImageGenerator:
 
     # - - -  F O N T S  - - - #
 
-    FONTS_FOLDER = path.join(ASSETS_FOLDER, "fonts")
-    TITLE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
-    VALUE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Black.ttf")
-    SUBTITLE_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
-    BOTTOM_TEXT_FONT_PATH = path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
+    FONTS_FOLDER = os.path.join(ASSETS_FOLDER, "fonts")
+    TITLE_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
+    VALUE_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Black.ttf")
+    SUBTITLE_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
+    BOTTOM_TEXT_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
     GRAPH_FONT_NAME = "Heebo"
     GRAPH_TITLE_WEIGHT = 800
     GRAPH_TICKS_WEIGHT = 500
@@ -175,7 +176,7 @@ class ImageGenerator:
         # Generate the figure, and load it to PIL.
         cls.save_plot_daydata(data, TEMP_FILE_PATH, title=title, dpi=250)
         graph = Image.open(TEMP_FILE_PATH).convert("L")
-        remove(TEMP_FILE_PATH)
+        os.remove(TEMP_FILE_PATH)
 
         # Create the mask layer
         graph_mask = Image.new("L", size=base_img.size, color="white")
@@ -249,12 +250,12 @@ class ImageGenerator:
         """ Returns an `Image` object that represents the background of the image. """
 
         # Choose random background
-        files = listdir(cls.RANDOM_BACKGROUND_IMAGES_FOLDER)
+        files = os.listdir(cls.RANDOM_BACKGROUND_IMAGES_FOLDER)
         random_file = random.choice(files)
 
         # Load random background
         random_img = Image.open(
-            path.join(cls.RANDOM_BACKGROUND_IMAGES_FOLDER, random_file))
+            os.path.join(cls.RANDOM_BACKGROUND_IMAGES_FOLDER, random_file))
 
         # Load background color image
         bg_color = cls.get_background_color(new_cases)
