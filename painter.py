@@ -515,12 +515,10 @@ class PosterText:
 
 class SingleDataPoster:
 
-    ASSETS_PATH = os.path.join("assets", "fa-svgs")
-    ARROW_UP_ICON = Image.open(os.path.join(
-        ASSETS_PATH, "arrow-alt-circle-up-solid.png"))
+    ASSETS_PATH = os.path.join("assets", "icons")
+    NO_CHANGE_ICON = Image.open(os.path.join(ASSETS_PATH, "no-change.png"))
+    ARROW_UP_ICON = Image.open(os.path.join(ASSETS_PATH, "arrow-up.png"))
     ARROW_DOWN_ICON = ImageOps.flip(ARROW_UP_ICON)
-    NO_CHANGE_ICON = Image.open(os.path.join(
-        ASSETS_PATH, "no-change-circle-solid.png"))
 
     def __init__(self,
                  title: str,
