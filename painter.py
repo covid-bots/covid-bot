@@ -367,10 +367,16 @@ class PosterText:
             *arguments: List,
             string_manager=StringManager()
     ):
-        self._string_manager = string_manager
+        self.set_string_manager(string_manager)
         self._lines = self.__arguments_to_lines(arguments)
         self._font_args = list()
         self._font_kwargs = list()
+
+    def set_string_manager(self, sm: StringManager) -> None:
+        if not isinstance(sm, StringManager):
+            raise TypeError(
+                "Argument must be an instance of the `StringManager` object.")
+        self._string_manager = sm
 
     def __arguments_to_lines(self, arguments: List):
         """ Recives a list of arguments.
@@ -493,7 +499,7 @@ class PosterText:
             # Generate the image - empty transparent
             return Image.new("RGBA", (width, cur_height), color=(255, 255, 255, 0))
 
-        line = left_lines.pop(0)
+        line = self._string_manager.convert(left_lines.pop(0))
         font = self.__get_font(text=line, target_size=width)
 
         height = font.getsize(line)[1]
@@ -526,14 +532,25 @@ class SingleDataPoster:
                  prev: int,
                  string_manager: StringManager = StringManager(),
                  ):
-        self.string_manager = string_manager
-
-        self._title = self.string_manager.convert(title)
+        self._title_raw = title
         self._now = now
         self._prev = prev
 
+        self.set_string_manager(string_manager)
+
+    def set_string_manager(self, sm: StringManager) -> None:
+        if not isinstance(sm, StringManager):
+            raise TypeError(
+                "Argument must be an instance of the `StringManager` object.")
+        self._string_manager = sm
+
+        self._title = None  # Indicates that needs to be converted next time accessed
+
     @property
     def title(self,) -> str:
+        if self._title is None:
+            # If not yet generated, generate the title.
+            self._title = self._string_manager.convert(self._title_raw)
         return self._title
 
     @property
@@ -550,7 +567,7 @@ class SingleDataPoster:
 
     @property
     def delta_str(self,) -> str:
-        return self.string_manager.delta_str(self.delta)
+        return self._string_manager.delta_str(self.delta)
 
     @property
     def delta_precentage(self,) -> float:
@@ -563,7 +580,7 @@ class SingleDataPoster:
     @property
     def delta_precentage_str(self,):
         if self.delta_precentage is None:
-            return self.string_manager.unavailable
+            return self._string_manager.unavailable
         return f"{abs(self.delta_precentage):.1f}%"
 
     def to_image(self,
@@ -787,11 +804,13 @@ class NewImageGenerator:
     ASSETS_FOLDER = "assets"
     FONTS_FOLDER = os.path.join(ASSETS_FOLDER, "fonts")
 
-    POSTER_TEXT_COLOR = "#424242"
+    ACCENT_COLOR = '#424242'
+
+    POSTER_TEXT_COLOR = ACCENT_COLOR
     POSTER_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Black.ttf")
     POSTER_WIDTH = 0.35               # Perecentage - 1 is the whole width of the image
     POSTER_PADDING_FROM_SIDES = 0.25  # Perecentage - 1 is the whole width of the image
-    POSTER_PADDING_TITLES = -0.033    # Perecentage - 1 is the whole height of the image
+    POSTER_PADDING_TITLES = -0.025    # Perecentage - 1 is the whole height of the image
 
     ALTER_FONT = ImageFont.truetype(os.path.join(
         FONTS_FOLDER, 'Heebo-Medium.ttf'), size=50)
@@ -829,8 +848,18 @@ class NewImageGenerator:
         2.50: (166, 25,  25),   # Dark red
     }
 
-    def __init__(self, base_img: Image.Image):
+    def __init__(self,
+                 base_img: Image.Image,
+                 string_manager: StringManager = StringManager()
+                 ):
         self._image = base_img
+        self.set_string_manager(string_manager)
+
+    def set_string_manager(self, sm: StringManager) -> None:
+        if not isinstance(sm, StringManager):
+            raise TypeError(
+                "Argument must be an instance of the `StringManager` object.")
+        self._string_manager = sm
 
     @property
     def image(self,):
@@ -890,8 +919,9 @@ class NewImageGenerator:
             raise ValueError(
                 "Poster `side` should be assembled using the characters `l` (left), `m` (middle) and `r` (right) only.")
 
-        # Set font of title
+        # Set font and string manager of title
         poster.set_truetype_font(self.POSTER_FONT_PATH)
+        poster.set_string_manager(self._string_manager)
 
         # Generate poster image
         poster_img = poster.to_image(
@@ -929,6 +959,7 @@ class NewImageGenerator:
         img = self.image
 
         for poster in data:
+            poster.set_string_manager(self._string_manager)
             poster_img = poster.to_image(**self.SINGLE_DATA_POSTER_ARGUMENTS)
             poster_img = self.__resize_to_height(poster_img, height)
 
