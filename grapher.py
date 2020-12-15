@@ -37,19 +37,28 @@ class GraphGenerator:
 
     def plot_r_values(self, data, size: Tuple[int] = (1000, 500)):
 
-        # convert pixels to inches
-        size = [self.__pixels_to_inches(cur) for cur in size]
-
-        # Create a new figure
-        fig = plt.figure(figsize=size)
-        ax = fig.add_subplot()
-
+        fig, ax = self.__build_empty_fig(size)
         x_list = [i for i in range(len(data))]
 
         self.__plot_line_with_gradient(x=x_list, y=data, ax=ax,)
         self.__plot_guide_line(x_list=x_list, y=1, ax=ax,)
 
         return fig
+
+    def plot_data(self, data, size: Tuple[int] = (1000, 500)):
+        fig, ax = self.__build_empty_fig(size)
+        x_list = [i for i in range(len(data))]
+
+        self.__plot_line_with_gradient(x=x_list, y=data, ax=ax,)
+        return fig
+
+    @classmethod
+    def __build_empty_fig(cls, size_px: Tuple[int]):
+        size = [cls.__pixels_to_inches(cur) for cur in size_px]
+        fig = plt.figure(figsize=size)
+        ax = fig.add_subplot()
+
+        return fig, ax
 
     def __plot_guide_line(self, x_list, y, ax):
         y_list = [y] * len(x_list)
