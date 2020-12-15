@@ -95,6 +95,9 @@ class StringManager:
             raise PermissionError(
                 "To translate strings, you must configure the translator using the `confign_translator` method.")
 
+        if self.__dest_lang.lower() == self.__BASE_LANG_CODE.lower():
+            return string
+
         return self.__translator.translate(
             string,
             dest=self.__dest_lang,
