@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.patches import Polygon
 
-from typing import Tuple
+from typing import Tuple, List
 
 
 class GraphGenerator:
@@ -22,34 +22,36 @@ class GraphGenerator:
     MAIN_LINES_CONFIG = {
     }
 
-    def __init__(self, main_color, accent_color):
-        self.MAIN_LINES_CONFIG["color"] = main_color
-        self.GUIDE_LINES_CONFIG["color"] = accent_color
-
-        self.MAIN_LINES_CONFIG = {
-            **self.GENERAL_LINES_CONFIG, **self.MAIN_LINES_CONFIG}
-        self.GUIDE_LINES_CONFIG = {
-            **self.GENERAL_LINES_CONFIG, **self.GUIDE_LINES_CONFIG}
-
     @staticmethod
     def __pixels_to_inches(px: int):
         return px / 100
 
-    def plot_r_values(self, data, size: Tuple[int] = (1000, 500)):
+    @classmethod
+    def plot_r_values(cls,
+                      data: List,
+                      size: Tuple[int] = (1000, 500),
+                      color="black",
+                      guide_color="red"
+                      ):
 
-        fig, ax = self.__build_empty_fig(size)
+        fig, ax = cls.__build_empty_fig(size)
         x_list = [i for i in range(len(data))]
 
-        self.__plot_line_with_gradient(x=x_list, y=data, ax=ax,)
-        self.__plot_guide_line(x_list=x_list, y=1, ax=ax,)
+        cls.__plot_line_with_gradient(x=x_list, y=data, ax=ax, color=color)
+        cls.__plot_guide_line(x_list=x_list, y=1, ax=ax, color=guide_color)
 
         return fig
 
-    def plot_data(self, data, size: Tuple[int] = (1000, 500)):
-        fig, ax = self.__build_empty_fig(size)
+    @classmethod
+    def plot_data(cls,
+                  data,
+                  size: Tuple[int] = (1000, 500),
+                  color="black"
+                  ):
+        fig, ax = cls.__build_empty_fig(size)
         x_list = [i for i in range(len(data))]
 
-        self.__plot_line_with_gradient(x=x_list, y=data, ax=ax,)
+        cls.__plot_line_with_gradient(x=x_list, y=data, ax=ax, color=color)
         return fig
 
     @classmethod
@@ -60,17 +62,29 @@ class GraphGenerator:
 
         return fig, ax
 
-    def __plot_guide_line(self, x_list, y, ax):
-        y_list = [y] * len(x_list)
-        ax.plot(x_list, y_list, **self.GUIDE_LINES_CONFIG)
+    @classmethod
+    def __plot_guide_line(cls, x_list: List, y, ax, color):
 
-    def __plot_line_with_gradient(self, x, y, ax):
+        GUIDE_LINES_CONFIG = {**cls.GENERAL_LINES_CONFIG,
+                              **cls.GUIDE_LINES_CONFIG,
+                              "color": color,
+                              }
+        y_list = [y] * len(x_list)
+        ax.plot(x_list, y_list, **GUIDE_LINES_CONFIG)
+
+    @classmethod
+    def __plot_line_with_gradient(cls, x, y, ax, color):
         """
         Plot a line with a linear alpha gradient filled beneath it.
         Edited from https://stackoverflow.com/a/29331211/10671845
         """
 
-        line, = ax.plot(x, y, **self.MAIN_LINES_CONFIG)
+        MAIN_LINES_CONFIG = {**cls.GENERAL_LINES_CONFIG,
+                             **cls.MAIN_LINES_CONFIG,
+                             "color": color,
+                             }
+
+        line, = ax.plot(x, y, **MAIN_LINES_CONFIG)
         color = line.get_color()
 
         alpha = line.get_alpha()
