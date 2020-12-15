@@ -114,7 +114,7 @@ class StringManager:
         elif num > 0:
             return f"+{num}"
         else:
-            return num  # automatically adds the `-` sign
+            return str(num)  # automatically adds the `-` sign
 
     @property
     def unchanged(self,) -> str:
