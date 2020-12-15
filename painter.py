@@ -836,71 +836,11 @@ class NewImageGenerator:
     def image(self,):
         return self._image.copy()
 
-    def _update_image(self, img: Image.Image):
-        self._image = img
-
-    def _precentage_of_width(self, value: float):
-        return int(self._image.width * value)
-
-    def _precentage_of_height(self, value: float):
-        return int(self._image.height * value)
-
     def add_background(self, r_value: float):
         background = Image.new("RGBA", size=self.image.size,
                                color=self._calc_background_color(r_value))
         background.alpha_composite(self.image)
         self._update_image(background)
-
-    def _calc_background_color(self, r_value: float):
-        """ Returns a color that represents the current R value.
-        If the R value is high, the color will red, and if its low, it will slowly
-        transform into orange -> yellow -> green -> blue.
-        Uses the `BACKGROUND_COLORS` dict
-        """
-
-        low_neighbor = None
-        high_neighbor = None
-
-        color_numbers = list(self.BACKGROUND_COLORS.keys())
-        color_numbers.sort()
-
-        for cur_color_i, cur_color_num in enumerate(color_numbers):
-            if r_value <= cur_color_num:
-                low_neighbor = cur_color_i - 1
-                break
-
-        # If the given num is lower then the minimum color num
-        if cur_color_i == 0:
-            return self.BACKGROUND_COLORS[color_numbers[0]]
-
-        # If the given num is higher then the maximum color num
-        if low_neighbor == None:
-            return self.BACKGROUND_COLORS[color_numbers[-1]]
-
-        # - - - - - - - - - - - - - - - - - - - #
-        # If the given num is somewhere between #
-
-        high_neighbor = color_numbers[low_neighbor + 1]
-        low_neighbor = color_numbers[low_neighbor]
-
-        high_neighbor_color = self.BACKGROUND_COLORS[high_neighbor]
-        low_neighbor_color = self.BACKGROUND_COLORS[low_neighbor]
-
-        r_fixed = r_value - low_neighbor
-        neighbors_delta = high_neighbor - low_neighbor
-
-        high_neighbor_force = r_fixed / neighbors_delta
-        low_neighbor_force = 1 - high_neighbor_force
-
-        new_color = [
-            int(
-                (low_color_elem * low_neighbor_force) +
-                (high_color_elem * high_neighbor_force)
-            )
-            for low_color_elem, high_color_elem in zip(low_neighbor_color, high_neighbor_color)
-        ]
-
-        return tuple(new_color)
 
     def test_background_gradint(self, from_: float, to: float, jumps: float = 0.01):
 
@@ -922,16 +862,15 @@ class NewImageGenerator:
 
         return img
 
-    def add_poster_title(
-        self,
-        poster: PosterText,
+    def add_poster_title(self,
+                         poster: PosterText,
 
-        y_relative: float = 0.5,
-        # 0 is the top, 1/2 is the middle and 1 is the bottom.
-        # middle is the default (:
+                         y_relative: float = 0.5,
+                         # 0 is the top, 1/2 is the middle and 1 is the bottom.
+                         # middle is the default (:
 
-        side: str = "m"
-    ):
+                         side: str = "m"
+                         ):
 
         # Assert good `side` value
         if not isinstance(side, str):
@@ -1002,6 +941,68 @@ class NewImageGenerator:
             x += jump
 
         self._update_image(img)
+
+    # - - - P R I V A T E - A N D - P R O T E C T E D - - - #
+
+    def _update_image(self, img: Image.Image):
+        self._image = img
+
+    def _precentage_of_width(self, value: float):
+        return int(self._image.width * value)
+
+    def _precentage_of_height(self, value: float):
+        return int(self._image.height * value)
+
+    def _calc_background_color(self, r_value: float):
+        """ Returns a color that represents the current R value.
+        If the R value is high, the color will red, and if its low, it will slowly
+        transform into orange -> yellow -> green -> blue.
+        Uses the `BACKGROUND_COLORS` dict
+        """
+
+        low_neighbor = None
+        high_neighbor = None
+
+        color_numbers = list(self.BACKGROUND_COLORS.keys())
+        color_numbers.sort()
+
+        for cur_color_i, cur_color_num in enumerate(color_numbers):
+            if r_value <= cur_color_num:
+                low_neighbor = cur_color_i - 1
+                break
+
+        # If the given num is lower then the minimum color num
+        if cur_color_i == 0:
+            return self.BACKGROUND_COLORS[color_numbers[0]]
+
+        # If the given num is higher then the maximum color num
+        if low_neighbor == None:
+            return self.BACKGROUND_COLORS[color_numbers[-1]]
+
+        # - - - - - - - - - - - - - - - - - - - #
+        # If the given num is somewhere between #
+
+        high_neighbor = color_numbers[low_neighbor + 1]
+        low_neighbor = color_numbers[low_neighbor]
+
+        high_neighbor_color = self.BACKGROUND_COLORS[high_neighbor]
+        low_neighbor_color = self.BACKGROUND_COLORS[low_neighbor]
+
+        r_fixed = r_value - low_neighbor
+        neighbors_delta = high_neighbor - low_neighbor
+
+        high_neighbor_force = r_fixed / neighbors_delta
+        low_neighbor_force = 1 - high_neighbor_force
+
+        new_color = [
+            int(
+                (low_color_elem * low_neighbor_force) +
+                (high_color_elem * high_neighbor_force)
+            )
+            for low_color_elem, high_color_elem in zip(low_neighbor_color, high_neighbor_color)
+        ]
+
+        return tuple(new_color)
 
     def __resize_to_height(self, img: Image.Image, height: int):
         """ Returns a copy of the given image, but resized so the image ratio
