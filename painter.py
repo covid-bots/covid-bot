@@ -784,11 +784,39 @@ class SingleDataPoster:
 
 class NewImageGenerator:
 
+    ASSETS_FOLDER = "assets"
+    FONTS_FOLDER = os.path.join(ASSETS_FOLDER, "fonts")
+
     POSTER_TEXT_COLOR = "#424242"
-    POSTER_FONT_PATH = os.path.join("assets", "fonts", "Heebo-Black.ttf")
+    POSTER_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Black.ttf")
     POSTER_WIDTH = 0.35               # Perecentage - 1 is the whole width of the image
     POSTER_PADDING_FROM_SIDES = 0.25  # Perecentage - 1 is the whole width of the image
     POSTER_PADDING_TITLES = -0.033    # Perecentage - 1 is the whole height of the image
+
+    ALTER_FONT = ImageFont.truetype(os.path.join(
+        FONTS_FOLDER, 'Heebo-Medium.ttf'), size=50)
+    TITLE_FONT = ImageFont.truetype(os.path.join(
+        FONTS_FOLDER, 'Heebo-Medium.ttf'), size=75)
+    DATA_FONT = ImageFont.truetype(os.path.join(
+        FONTS_FOLDER, 'Heebo-Black.ttf'), size=100)
+
+    DATA_PADDING_FROM_SIDES = 0.2  # Perecentage - 1 is the whole width of the image
+
+    SINGLE_DATA_POSTER_ARGUMENTS = {
+        "data_font": DATA_FONT,
+        "title_font": TITLE_FONT,
+        "alter_font": ALTER_FONT,
+
+        "color": "white",
+        "line_length": 400,
+        "line_width": 5,
+
+        "icon_size": 50,
+        "pad_icon": 25,
+
+        "pad_title": -25,
+        "pad_data": 40,
+    }
 
     BACKGROUND_COLORS = {
         # Keys are R values.
@@ -939,3 +967,47 @@ class NewImageGenerator:
         img = self.image
         img.paste(poster_img, box=(x, y), mask=poster_img)
         self._update_image(img)
+
+    def add_data(self,
+                 data: List[SingleDataPoster],
+                 start_relative_y: float,
+                 end_relative_y: float,
+                 ) -> None:
+
+        start_y = self._precentage_of_height(start_relative_y)
+        end_y = self._precentage_of_height(end_relative_y)
+        height = end_y - start_y
+
+        if len(data) > 1:
+            pad = self._precentage_of_width(self.DATA_PADDING_FROM_SIDES)
+            work_area = self.image.width - (pad * 2)
+            jump = int(work_area / (len(data) - 1))
+            x = pad
+        else:
+            jump = 0
+            x = self._precentage_of_width(0.5)
+
+        img = self.image
+
+        for poster in data:
+            poster_img = poster.to_image(**self.SINGLE_DATA_POSTER_ARGUMENTS)
+            poster_img = self.__resize_to_height(poster_img, height)
+
+            color_img = Image.new(
+                "RGB", size=poster_img.size, color=self.SINGLE_DATA_POSTER_ARGUMENTS["color"])
+
+            paste_x = x - int(poster_img.width / 2)
+            img.paste(color_img, box=(paste_x, start_y), mask=poster_img)
+
+            x += jump
+
+        self._update_image(img)
+
+    def __resize_to_height(self, img: Image.Image, height: int):
+        """ Returns a copy of the given image, but resized so the image ratio
+        stays the same, and the height of the new image equal the given height. """
+
+        resize_factor = img.height / height
+        new_width = int(img.width / resize_factor)
+        return img.resize((new_width, height))
+
