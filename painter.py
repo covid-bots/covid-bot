@@ -997,12 +997,13 @@ class NewImageGenerator:
         )
 
         base_img = self.image
-        fig_img = GraphGenerator.fig_to_pil(fig)
+        fig_mask = GraphGenerator.fig_to_pil(fig)
+        fig_img = fig_mask.convert('RGB')
 
         pos = [cur_pos - int((img_size / 2))
                for img_size, cur_pos in zip(size, pos)]
 
-        base_img.paste(fig_img, box=pos, mask=fig_img)
+        base_img.paste(fig_img, box=pos, mask=fig_mask)
         self._update_image(base_img)
 
     def add_graph_r_values(self,
@@ -1027,13 +1028,15 @@ class NewImageGenerator:
         )
 
         base_img = self.image
-        fig_img = GraphGenerator.fig_to_pil(fig)
+        fig_mask = GraphGenerator.fig_to_pil(fig)
+        fig_img = fig_mask.convert('RGB')
 
         pos = [cur_pos - int((img_size / 2))
                for img_size, cur_pos in zip(size, pos)]
 
-        base_img.paste(fig_img, box=pos, mask=fig_img)
+        base_img.paste(fig_img, box=pos, mask=fig_mask)
         self._update_image(base_img)
+
     # - - - P R I V A T E - A N D - P R O T E C T E D - - - #
 
     def _update_image(self, img: Image.Image):
