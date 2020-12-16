@@ -17,6 +17,7 @@ import pylab
 
 # My code
 from translator import StringManager
+from grapher import GraphGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -808,9 +809,12 @@ class NewImageGenerator:
 
     POSTER_TEXT_COLOR = ACCENT_COLOR
     POSTER_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Black.ttf")
-    POSTER_WIDTH = 0.35               # Perecentage - 1 is the whole width of the image
-    POSTER_PADDING_FROM_SIDES = 0.25  # Perecentage - 1 is the whole width of the image
-    POSTER_PADDING_TITLES = -0.025    # Perecentage - 1 is the whole height of the image
+
+    # Perecentage: values between 0 and 1,
+    # where 1 is the whole width / height of the image.
+    POSTER_WIDTH = 0.35  # 1 is the whole width
+    POSTER_PADDING_FROM_SIDES = 0.275  # 1 is the whole width
+    POSTER_PADDING_TITLES = -0.025    # 1 is the whole height
 
     ALTER_FONT = ImageFont.truetype(os.path.join(
         FONTS_FOLDER, 'Heebo-Medium.ttf'), size=50)
@@ -867,7 +871,7 @@ class NewImageGenerator:
 
     def add_background(self, r_value: float):
         background = Image.new("RGBA", size=self.image.size,
-                               color=self._calc_background_color(r_value))
+                               color=self._calc_color(r_value))
         background.alpha_composite(self.image)
         self._update_image(background)
 
@@ -973,6 +977,63 @@ class NewImageGenerator:
 
         self._update_image(img)
 
+    def add_graph(self,
+                  data: List[int],
+                  r_value: float,
+                  relative_size: Tuple[int],
+                  relative_pos: Tuple[int]
+                  ):
+
+        size = tuple([self._precentage_of_width(cur) for cur in relative_size])
+        pos = (
+            self._precentage_of_width(relative_pos[0]),
+            self._precentage_of_height(relative_pos[1])
+        )
+
+        fig = GraphGenerator.plot_data(
+            data,
+            size=size,
+            color=self._calc_color(r_value)
+        )
+
+        base_img = self.image
+        fig_img = GraphGenerator.fig_to_pil(fig)
+
+        pos = [cur_pos - int((img_size / 2))
+               for img_size, cur_pos in zip(size, pos)]
+
+        base_img.paste(fig_img, box=pos, mask=fig_img)
+        self._update_image(base_img)
+
+    def add_graph_r_values(self,
+                           data: List[int],
+                           r_value: float,
+                           guide_color,
+                           relative_size: Tuple[int],
+                           relative_pos: Tuple[int],
+                           ):
+
+        size = tuple([self._precentage_of_width(cur) for cur in relative_size])
+        pos = (
+            self._precentage_of_width(relative_pos[0]),
+            self._precentage_of_height(relative_pos[1])
+        )
+
+        fig = GraphGenerator.plot_r_values(
+            data=data,
+            size=size,
+            color=self._calc_color(r_value),
+            guide_color=guide_color,
+        )
+
+        base_img = self.image
+        fig_img = GraphGenerator.fig_to_pil(fig)
+
+        pos = [cur_pos - int((img_size / 2))
+               for img_size, cur_pos in zip(size, pos)]
+
+        base_img.paste(fig_img, box=pos, mask=fig_img)
+        self._update_image(base_img)
     # - - - P R I V A T E - A N D - P R O T E C T E D - - - #
 
     def _update_image(self, img: Image.Image):
@@ -984,7 +1045,7 @@ class NewImageGenerator:
     def _precentage_of_height(self, value: float):
         return int(self._image.height * value)
 
-    def _calc_background_color(self, r_value: float):
+    def _calc_color(self, r_value: float):
         """ Returns a color that represents the current R value.
         If the R value is high, the color will red, and if its low, it will slowly
         transform into orange -> yellow -> green -> blue.
