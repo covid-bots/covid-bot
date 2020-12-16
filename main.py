@@ -27,9 +27,6 @@ class CovidStatsInstagramBot:
     COUNTRY = "israel"
     COMPARE_X_DAYS = 60
 
-    API_BASE_URL = "https://api.covid19api.com/dayone/country/"
-    SOCIALMEDIA_INFO_PATH = "logininfo.json"
-
     BIG_TITLE = "םישדח םילוח"
     MIDDLE_TITLES = ["םיתמ", "תעכ םילוח", "ומילחה"]
     SUBTITLE_TEMPLATE = "לומתאמ %n%="
