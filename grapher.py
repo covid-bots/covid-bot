@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.patches import Polygon
+from PIL import Image
+import os
 
 from typing import Tuple, List
 
@@ -46,13 +48,27 @@ class GraphGenerator:
     def plot_data(cls,
                   data,
                   size: Tuple[int] = (1000, 500),
-                  color="black"
+                  color="black",
                   ):
         fig, ax = cls.__build_empty_fig(size)
         x_list = [i for i in range(len(data))]
 
         cls.__plot_line_with_gradient(x=x_list, y=data, ax=ax, color=color)
         return fig
+
+    @staticmethod
+    def color_8bit_to_float(color_tuple: Tuple):
+        """ Converts a color represented by 3 RGB numbers between 0 and 255 into
+        a color represented with 3 floats between 0 and 1. """
+        return tuple([color / 255 for color in color_tuple])
+
+    @classmethod
+    def fig_to_pil(cls, fig, temp_file_path="tempimg.png") -> Image.Image:
+        cls.save_clean(fig, temp_file_path)
+        img = Image.open(temp_file_path)
+        # os.remove(temp_file_path)
+
+        return img
 
     @classmethod
     def __build_empty_fig(cls, size_px: Tuple[int]):
@@ -64,6 +80,9 @@ class GraphGenerator:
 
     @classmethod
     def __plot_guide_line(cls, x_list: List, y, ax, color):
+
+        if isinstance(color, tuple):
+            color = cls.color_8bit_to_float(color)
 
         GUIDE_LINES_CONFIG = {**cls.GENERAL_LINES_CONFIG,
                               **cls.GUIDE_LINES_CONFIG,
@@ -78,6 +97,9 @@ class GraphGenerator:
         Plot a line with a linear alpha gradient filled beneath it.
         Edited from https://stackoverflow.com/a/29331211/10671845
         """
+
+        if isinstance(color, tuple):
+            color = cls.color_8bit_to_float(color)
 
         MAIN_LINES_CONFIG = {**cls.GENERAL_LINES_CONFIG,
                              **cls.MAIN_LINES_CONFIG,
