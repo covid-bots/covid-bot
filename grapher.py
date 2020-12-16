@@ -22,6 +22,7 @@ class GraphGenerator:
     }
 
     MAIN_LINES_CONFIG = {
+        "linewidth": 7
     }
 
     @staticmethod
