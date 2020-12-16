@@ -54,9 +54,13 @@ class SingleDayData:
 
 class multipleDaysData:
 
-    def __init__(self, json_info):
-        self.__raw = json_info
-        self.__daydata = [SingleDayData(data) for data in json_info]
+    def __init__(self, json_info, last_x_days=None):
+        self.__raw = self.__normalize_data(json_info)
+
+        if last_x_days:
+            self.__raw = self.__raw[-last_x_days:]
+
+        self.__daydata = [SingleDayData(data) for data in self.__raw]
         self.__daydelta = [
             DayDataDiff(
                 self.__daydata[index],
@@ -64,6 +68,13 @@ class multipleDaysData:
             )
             for index in range(1, len(self.__daydata))
         ]
+
+    @staticmethod
+    def __normalize_data(json_info: list):
+        """ Some countries have more then one province. This method will remove
+        the data from the different province, and will only keep the main data.
+        """
+        return [day for day in json_info if day["Province"] == '']
 
     def get_data_before_x_days(self, days: int):
         return self.__daydata[-days]
@@ -124,6 +135,9 @@ class multipleDaysData:
             r_list.append(cur_r_value)
 
         return r_list
+
+    def last_day_r_value(self,):
+        return self.get_r_values()[-1]
 
 
 class DayDataDiff:
@@ -227,10 +241,7 @@ class Covid19API:
             "dayone", "country", country)
         response_json = cls.__request(request_url)
 
-        if last_x_days:
-            response_json = response_json[-last_x_days:]
-
-        return multipleDaysData(response_json)
+        return multipleDaysData(response_json, last_x_days=last_x_days)
 
     @classmethod
     def get_today_stats(cls, country: str):
