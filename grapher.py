@@ -25,6 +25,11 @@ class GraphGenerator:
         "linewidth": 7
     }
 
+    MARKERS_CONFIG = {
+        "zorder": 10,
+        "s": 250,
+    }
+
     @staticmethod
     def __pixels_to_inches(px: int):
         return px / 100
@@ -137,11 +142,68 @@ class GraphGenerator:
     @classmethod
     def save_clean(cls, figure, filepath):
         """ Saves a clean version of the figure (without axes, transperant background). """
-        cls.remove_axis(figure)
+        cls.config_axis(figure)
+        figure.tight_layout()
         figure.savefig(filepath, transparent=True)
 
     @staticmethod
-    def remove_axis(figure):
+    def config_axis(figure):
         """ Removes the axis from a graph. """
         for ax in figure.get_axes():
-            ax.axis(False)
+            ax.axis(False)  # Hide axis
+            ax.use_sticky_edges = False
+            ax.margins(x=0.1, y=0.1)  # "Zoom out" 10%
+
+    @classmethod
+    def find_min(cls, data: List[float], last: bool = False):
+        y = min(data)
+        x = cls.__find_x_by_y(data, y, last=last)
+        return (x, y)
+
+    @classmethod
+    def find_max(cls, data: List[float], last: bool = False):
+        y = max(data)
+        x = cls.__find_x_by_y(data, y, last=last)
+        return (x, y)
+
+    @staticmethod
+    def __find_x_by_y(data: List[float], y: float, last: bool = False,) -> int:
+        if last:
+            data = data.copy()
+            data.reverse()
+            x = len(data) - 1 - data.index(y)
+        else:
+            x = data.index(y)
+        return x
+
+    @classmethod
+    def mark_min(cls,
+                 ax,
+                 data: List[float],
+                 last: bool = False,
+                 color="red"
+                 ):
+        point = cls.find_min(data, last=last)
+        cls.mark_point(ax, point, color)
+
+    @classmethod
+    def mark_max(cls,
+                 ax,
+                 data: List[float],
+                 last: bool = False,
+                 color="red"
+                 ):
+        point = cls.find_max(data, last=last)
+        cls.mark_point(ax, point, color)
+
+    @classmethod
+    def mark_point(cls, ax, point: Tuple[float], color="red"):
+        config = {**cls.MARKERS_CONFIG,
+                  "facecolor": color}
+
+        ax.scatter(
+            x=point[0],
+            y=point[1],
+            **config,
+        )
+
