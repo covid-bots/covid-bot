@@ -981,7 +981,9 @@ class NewImageGenerator:
                   data: List[int],
                   r_value: float,
                   relative_size: Tuple[int],
-                  relative_pos: Tuple[int]
+                  relative_pos: Tuple[int],
+                  title: str = None,
+                  title_color=None,
                   ):
 
         size = tuple([self._precentage_of_width(cur) for cur in relative_size])
@@ -991,6 +993,8 @@ class NewImageGenerator:
         )
 
         graph_gen = GraphGenerator()
+        graph_gen.set_title(title, title_color)
+
         graph_gen.add_data(
             data,
             min_color=self.ACCENT_COLOR,
@@ -1014,6 +1018,8 @@ class NewImageGenerator:
                            guide_color,
                            relative_size: Tuple[int],
                            relative_pos: Tuple[int],
+                           title: str = None,
+                           title_color=None,
                            ):
 
         size = tuple([self._precentage_of_width(cur) for cur in relative_size])
@@ -1023,6 +1029,8 @@ class NewImageGenerator:
         )
 
         graph_gen = GraphGenerator()
+        graph_gen.set_title(title, title_color)
+
         graph_gen.add_data(
             data,
             color=self._calc_color(r_value),

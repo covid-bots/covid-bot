@@ -2,10 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.patches import Polygon
+from bidi.algorithm import get_display
 from PIL import Image
 import os
 
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Optional
 
 
 class GraphGenerator:
@@ -37,11 +38,17 @@ class GraphGenerator:
         "verticalalignment": "center",
     }
 
+    TITLE_TEXT_CONFIG = {
+        **TEXT_CONFIG,
+        "pad": 50,
+    }
+
     MARK_TEXT_OFFEST = 0.125  # relative to the height of the figure
 
     def __init__(self,):
         self._data = list()
         self._guides = list()
+        self._title = (None, None)
 
     def add_data(self,
                  data: List[float],
@@ -123,6 +130,13 @@ class GraphGenerator:
 
         ax.plot(x, y, **config)
 
+    def _plot_title(self, ax,):
+        title, color = self._title
+        if title is not None:
+            ax.set_title(get_display(title),
+                         **self.TITLE_TEXT_CONFIG,
+                         color=color)
+
     def _generate(self):
         """ Generates the figure and returns a matplotlib `figure` instance. """
 
@@ -136,11 +150,19 @@ class GraphGenerator:
         for guide in self._guides:
             self._plot_guide_line(ax, length=data_len, **guide)
 
+        self._plot_title(ax)
+
         return fig, ax
 
     def to_img(self, temp_file_path: str = "fig.png", size=None,) -> Image.Image:
         self.save(temp_file_path, size=size,)
         return Image.open(temp_file_path)
+
+    def set_title(self, title: Optional[str] = None, color=None):
+        self._title = (title, color)
+
+    def clear_title(self,):
+        self.set_title(None)
 
     def save(self, filepath: str, size=None):
         """ Saves a clean version of the figure (without axes, transperant background). """
@@ -255,7 +277,7 @@ class GraphGenerator:
         config = {**cls.TEXT_CONFIG,
                   "x": x,
                   "y": y+offset,
-                  "s": text,
+                  "s": get_display(text),
                   "color": color,
                   }
 
