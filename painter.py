@@ -844,12 +844,12 @@ class NewImageGenerator:
     BACKGROUND_COLORS = {
         # Keys are R values.
         # See method `get_background_color` for more information!
-        0.50: (24,  205, 244),  # Light blue
-        0.75: (113, 248, 90),   # Light green
-        1.00: (191, 248, 18),   # Green, starts to became orange
-        1.25: (248, 170, 18),   # Orange
-        1.50: (247, 71,  36),   # Red
-        2.50: (166, 25,  25),   # Dark red
+        0.50:  (24,  205, 244),  # Light blue
+        0.75:  (113, 248, 90),   # Light green
+        1.00:  (191, 248, 18),   # Green, starts to became orange
+        1.125: (248, 170, 18),   # Orange
+        1.25:  (247, 71,  36),   # Red
+        1.75:  (166, 25,  25),   # Dark red
     }
 
     def __init__(self,
@@ -875,7 +875,8 @@ class NewImageGenerator:
         background.alpha_composite(self.image)
         self._update_image(background)
 
-    def test_background_gradint(self, from_: float, to: float, jumps: float = 0.01):
+    @classmethod
+    def test_color_gradint(cls, from_: float, to: float, jumps: float = 0.01):
 
         width = math.ceil((to - from_) / jumps)
         height = int(width / 5)
@@ -886,7 +887,7 @@ class NewImageGenerator:
         for cur_pixel in range(width):
 
             cur_r = from_ + (jumps * cur_pixel)
-            color = self.get_background_color(cur_r)
+            color = cls._calc_color(cur_r)
 
             p1 = (cur_pixel, 0)
             p2 = (cur_pixel, height)
@@ -1061,7 +1062,8 @@ class NewImageGenerator:
     def _precentage_of_height(self, value: float):
         return int(self._image.height * value)
 
-    def _calc_color(self, r_value: float):
+    @classmethod
+    def _calc_color(cls, r_value: float):
         """ Returns a color that represents the current R value.
         If the R value is high, the color will red, and if its low, it will slowly
         transform into orange -> yellow -> green -> blue.
@@ -1071,7 +1073,7 @@ class NewImageGenerator:
         low_neighbor = None
         high_neighbor = None
 
-        color_numbers = list(self.BACKGROUND_COLORS.keys())
+        color_numbers = list(cls.BACKGROUND_COLORS.keys())
         color_numbers.sort()
 
         for cur_color_i, cur_color_num in enumerate(color_numbers):
@@ -1081,11 +1083,11 @@ class NewImageGenerator:
 
         # If the given num is lower then the minimum color num
         if cur_color_i == 0:
-            return self.BACKGROUND_COLORS[color_numbers[0]]
+            return cls.BACKGROUND_COLORS[color_numbers[0]]
 
         # If the given num is higher then the maximum color num
         if low_neighbor == None:
-            return self.BACKGROUND_COLORS[color_numbers[-1]]
+            return cls.BACKGROUND_COLORS[color_numbers[-1]]
 
         # - - - - - - - - - - - - - - - - - - - #
         # If the given num is somewhere between #
@@ -1093,8 +1095,8 @@ class NewImageGenerator:
         high_neighbor = color_numbers[low_neighbor + 1]
         low_neighbor = color_numbers[low_neighbor]
 
-        high_neighbor_color = self.BACKGROUND_COLORS[high_neighbor]
-        low_neighbor_color = self.BACKGROUND_COLORS[low_neighbor]
+        high_neighbor_color = cls.BACKGROUND_COLORS[high_neighbor]
+        low_neighbor_color = cls.BACKGROUND_COLORS[low_neighbor]
 
         r_fixed = r_value - low_neighbor
         neighbors_delta = high_neighbor - low_neighbor
