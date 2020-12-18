@@ -244,13 +244,7 @@ class GraphGenerator:
                          offset: float,
                          ) -> None:
         x, y = point
-        x_str, y_str = str(x), str(y)
-
-        if isinstance(x, float):
-            x_str = f"{x:.2}"
-
-        if isinstance(y, float):
-            y_str = f"{y:.2}"
+        x_str, y_str = str(round(x, 2)), str(round(y, 2))
 
         text = text.replace("{x}", str(x_str)).replace("{y}", str(y_str))
 
