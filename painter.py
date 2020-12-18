@@ -710,8 +710,8 @@ class SingleDataPoster:
                 icon_size = (icon_size, icon_size)
             icon = icon.resize(icon_size)
 
-        # Paste icon in the middle
-        x = int((image.width - icon.width) / 2)
+        # Paste icon
+        x = int(font.getsize(self.delta_str)[0] + pad_icon)
         y = int((image.height - icon.height) / 2)
         image.paste(icon, box=(x, y))
 
@@ -719,15 +719,15 @@ class SingleDataPoster:
         draw = ImageDraw.Draw(image)
 
         # Paste left text
-        x = int(((image.width - icon.width) / 2) - pad_icon)
+        x = 0
         y = int(image.height / 2)
         draw.text((x, y), self.delta_str,
-                  fill=color, font=font, anchor="rm")
+                  fill=color, font=font, anchor="lm")
 
         # Paste right text
-        x = int(((image.width + icon.width) / 2) + pad_icon)
+        x = image.width
         draw.text((x, y), self.delta_precentage_str,
-                  fill=color, font=font, anchor="lm")
+                  fill=color, font=font, anchor="rm")
 
         return image
 
@@ -757,10 +757,8 @@ class SingleDataPoster:
 
         alter_width = icon_size
         alter_width += pad_icon * 2
-        alter_width += max(
-            font.getsize(self.delta_str)[0],
+        alter_width += font.getsize(self.delta_str)[0] + \
             font.getsize(self.delta_precentage_str)[0]
-        ) * 2
 
         return math.ceil(alter_width)
 
