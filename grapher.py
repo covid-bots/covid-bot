@@ -5,7 +5,7 @@ from matplotlib.patches import Polygon
 from PIL import Image
 import os
 
-from typing import Tuple, List
+from typing import Tuple, List, Union
 
 
 class GraphGenerator:
@@ -30,89 +30,138 @@ class GraphGenerator:
         "s": 250,
     }
 
-    @staticmethod
-    def __pixels_to_inches(px: int):
-        return px / 100
+    TEXT_CONFIG = {
+        "fontsize": "xx-large",
+        "fontweight": "bold",
+        "horizontalalignment": "center",
+        "verticalalignment": "center",
+    }
 
-    @classmethod
-    def plot_r_values(cls,
-                      data: List,
-                      size: Tuple[int] = (1000, 500),
-                      color="black",
-                      guide_color="red"
-                      ):
+    MARK_TEXT_OFFEST = 0.125  # relative to the height of the figure
 
-        fig, ax = cls.__build_empty_fig(size)
+    def __init__(self,):
+        self._data = list()
+        self._guides = list()
+
+    def add_data(self,
+                 data: List[float],
+                 color="black",
+                 min_color=None,  # None = don't mark
+                 max_color=None,
+                 min_text="{y}",
+                 max_text="{y}",
+                 ) -> None:
+        self._data.append({
+            "data": data,
+            "color": color,
+            "min_color": min_color,
+            "max_color": max_color,
+            "min_text": min_text,
+            "max_text": max_text,
+        })
+
+    def add_guide_line(self,
+                       y: float,
+                       color="red",
+                       ) -> None:
+        self._guides.append({
+            "y": y,
+            "color": color,
+        })
+
+    def _plot_data(self,
+                   ax,
+                   data,
+                   color,
+                   min_color,
+                   max_color,
+                   min_text,
+                   max_text,
+                   ) -> None:
+        """ Plots the given data list to the figure. """
+
         x_list = [i for i in range(len(data))]
+        self.__plot_line_with_gradient(ax=ax, x=x_list, y=data, color=color)
 
-        cls.__plot_line_with_gradient(x=x_list, y=data, ax=ax, color=color)
-        cls.__plot_guide_line(x_list=x_list, y=1, ax=ax, color=guide_color)
+        min_y = min(data)
+        max_y = max(data)
+        range_y = max_y - min_y
+        mark_titles_offset = range_y * self.MARK_TEXT_OFFEST
 
-        return fig
+        if min_color is not None:
+            x = data.index(min_y)
+            self._mark_point(ax, (x, min_y), color=min_color)
+            self._mark_text_point(ax, (x, min_y), color=min_color,
+                                  text=min_text, offset=-mark_titles_offset)
 
-    @classmethod
-    def plot_data(cls,
-                  data,
-                  size: Tuple[int] = (1000, 500),
-                  color="black",
-                  ):
-        fig, ax = cls.__build_empty_fig(size)
-        x_list = [i for i in range(len(data))]
+        if max_color is not None:
+            x = data.index(max_y)
+            self._mark_point(ax, (x, max_y), color=max_color)
+            self._mark_text_point(ax, (x, max_y), color=max_color,
+                                  text=max_text, offset=mark_titles_offset)
 
-        cls.__plot_line_with_gradient(x=x_list, y=data, ax=ax, color=color)
-        return fig
+    def _plot_guide_line(self,
+                         ax,
+                         y: float,
+                         color,
+                         length,
+                         ) -> None:
+        """ Adds a guide line in the given Y value.
+        The guild line is a dashed straight line! """
 
-    @staticmethod
-    def color_8bit_to_float(color_tuple: Tuple):
-        """ Converts a color represented by 3 RGB numbers between 0 and 255 into
-        a color represented with 3 floats between 0 and 1. """
-        return tuple([color / 255 for color in color_tuple])
+        x = [0, length - 1]
+        y = [y] * 2
 
-    @classmethod
-    def fig_to_pil(cls, fig, temp_file_path="tempimg.png") -> Image.Image:
-        cls.save_clean(fig, temp_file_path)
-        img = Image.open(temp_file_path)
-        # os.remove(temp_file_path)
+        config = {**self.GENERAL_LINES_CONFIG,
+                  **self.GUIDE_LINES_CONFIG,
+                  "color": self.__normalize_color(color),
+                  }
 
-        return img
+        ax.plot(x, y, **config)
 
-    @classmethod
-    def __build_empty_fig(cls, size_px: Tuple[int]):
-        size = [cls.__pixels_to_inches(cur) for cur in size_px]
-        fig = plt.figure(figsize=size)
-        ax = fig.add_subplot()
+    def _generate(self):
+        """ Generates the figure and returns a matplotlib `figure` instance. """
+
+        fig, ax = self.__build_empty_fig()
+        data_len = 0
+
+        for data in self._data:
+            data_len = max([data_len, len(data["data"])])
+            self._plot_data(ax, **data)
+
+        for guide in self._guides:
+            self._plot_guide_line(ax, length=data_len, **guide)
 
         return fig, ax
 
-    @classmethod
-    def __plot_guide_line(cls, x_list: List, y, ax, color):
+    def to_img(self, temp_file_path: str = "fig.png", size=None,) -> Image.Image:
+        self.save(temp_file_path, size=size,)
+        return Image.open(temp_file_path)
 
-        if isinstance(color, tuple):
-            color = cls.color_8bit_to_float(color)
+    def save(self, filepath: str, size=None):
+        """ Saves a clean version of the figure (without axes, transperant background). """
 
-        GUIDE_LINES_CONFIG = {**cls.GENERAL_LINES_CONFIG,
-                              **cls.GUIDE_LINES_CONFIG,
-                              "color": color,
-                              }
-        y_list = [y] * len(x_list)
-        ax.plot(x_list, y_list, **GUIDE_LINES_CONFIG)
+        fig, ax = self._generate()
 
-    @classmethod
-    def __plot_line_with_gradient(cls, x, y, ax, color):
+        if size is not None:
+            fig.set_size_inches(self.__pixels_to_inches(size))
+
+        self.__config_ax(ax)
+        fig.tight_layout()
+        fig.savefig(filepath, transparent=True)
+
+    def __plot_line_with_gradient(self, ax, x, y, color):
         """
         Plot a line with a linear alpha gradient filled beneath it.
         Edited from https://stackoverflow.com/a/29331211/10671845
         """
 
-        if isinstance(color, tuple):
-            color = cls.color_8bit_to_float(color)
+        config = {**self.GENERAL_LINES_CONFIG,
+                  **self.MAIN_LINES_CONFIG,
+                  "color": self.__normalize_color(color),
+                  }
 
-        MAIN_LINES_CONFIG = {**cls.GENERAL_LINES_CONFIG,
-                             **cls.MAIN_LINES_CONFIG,
-                             "color": color,
-                             }
-
-        line, = ax.plot(x, y, **MAIN_LINES_CONFIG)
+        line, = ax.plot(x, y, **config)
         color = line.get_color()
 
         alpha = line.get_alpha()
@@ -137,67 +186,46 @@ class GraphGenerator:
         ax.add_patch(clip_path)
         im.set_clip_path(clip_path)
 
-        return line, im
-
-    @classmethod
-    def save_clean(cls, figure, filepath):
-        """ Saves a clean version of the figure (without axes, transperant background). """
-        cls.config_axis(figure)
-        figure.tight_layout()
-        figure.savefig(filepath, transparent=True)
+    def __update_data_length(self, new_len: int):
+        self._data_len = max(self._data_len, new_len)
 
     @staticmethod
-    def config_axis(figure):
+    def __config_ax(ax):
         """ Removes the axis from a graph. """
-        for ax in figure.get_axes():
-            ax.axis(False)  # Hide axis
-            ax.use_sticky_edges = False
-            ax.margins(x=0.1, y=0.1)  # "Zoom out" 10%
 
-    @classmethod
-    def find_min(cls, data: List[float], last: bool = False):
-        y = min(data)
-        x = cls.__find_x_by_y(data, y, last=last)
-        return (x, y)
-
-    @classmethod
-    def find_max(cls, data: List[float], last: bool = False):
-        y = max(data)
-        x = cls.__find_x_by_y(data, y, last=last)
-        return (x, y)
+        ax.axis(False)  # Hide axis
+        ax.use_sticky_edges = False
+        ax.margins(x=0.1, y=0.1)  # "Zoom out" 10%
 
     @staticmethod
-    def __find_x_by_y(data: List[float], y: float, last: bool = False,) -> int:
-        if last:
-            data = data.copy()
-            data.reverse()
-            x = len(data) - 1 - data.index(y)
+    def __pixels_to_inches(px: Union[int, Tuple[int]]):
+
+        if isinstance(px, int):
+            return px / 100
+
         else:
-            x = data.index(y)
-        return x
+            return tuple([
+                cur / 100
+                for cur in px
+            ])
+
+    @staticmethod
+    def __normalize_color(color):
+        """ Converts a color represented by 3 RGB numbers between 0 and 255 into
+        a color represented with 3 floats between 0 and 1. """
+
+        if isinstance(color, tuple):
+            color = tuple([cur / 255 for cur in color])
+        return color
+
+    @staticmethod
+    def __build_empty_fig():
+        fig = plt.figure()
+        ax = fig.add_subplot()
+        return fig, ax
 
     @classmethod
-    def mark_min(cls,
-                 ax,
-                 data: List[float],
-                 last: bool = False,
-                 color="red"
-                 ):
-        point = cls.find_min(data, last=last)
-        cls.mark_point(ax, point, color)
-
-    @classmethod
-    def mark_max(cls,
-                 ax,
-                 data: List[float],
-                 last: bool = False,
-                 color="red"
-                 ):
-        point = cls.find_max(data, last=last)
-        cls.mark_point(ax, point, color)
-
-    @classmethod
-    def mark_point(cls, ax, point: Tuple[float], color="red"):
+    def _mark_point(cls, ax, point: Tuple[float], color="red"):
         config = {**cls.MARKERS_CONFIG,
                   "facecolor": color}
 
@@ -206,4 +234,32 @@ class GraphGenerator:
             y=point[1],
             **config,
         )
+
+    @classmethod
+    def _mark_text_point(cls,
+                         ax,
+                         point: Tuple[float],
+                         color,
+                         text: str,
+                         offset: float,
+                         ) -> None:
+        x, y = point
+        x_str, y_str = str(x), str(y)
+
+        if isinstance(x, float):
+            x_str = f"{x:.2}"
+
+        if isinstance(y, float):
+            y_str = f"{y:.2}"
+
+        text = text.replace("{x}", str(x_str)).replace("{y}", str(y_str))
+
+        config = {**cls.TEXT_CONFIG,
+                  "x": x,
+                  "y": y+offset,
+                  "s": text,
+                  "color": color,
+                  }
+
+        ax.text(**config)
 

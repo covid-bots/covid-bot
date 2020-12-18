@@ -990,14 +990,16 @@ class NewImageGenerator:
             self._precentage_of_height(relative_pos[1])
         )
 
-        fig = GraphGenerator.plot_data(
+        graph_gen = GraphGenerator()
+        graph_gen.add_data(
             data,
-            size=size,
-            color=self._calc_color(r_value)
+            min_color=self.ACCENT_COLOR,
+            max_color=self.ACCENT_COLOR,
+            color=self._calc_color(r_value),
         )
 
         base_img = self.image
-        fig_mask = GraphGenerator.fig_to_pil(fig)
+        fig_mask = graph_gen.to_img(size=size)
         fig_img = fig_mask.convert('RGB')
 
         pos = [cur_pos - int((img_size / 2))
@@ -1020,15 +1022,18 @@ class NewImageGenerator:
             self._precentage_of_height(relative_pos[1])
         )
 
-        fig = GraphGenerator.plot_r_values(
-            data=data,
-            size=size,
+        graph_gen = GraphGenerator()
+        graph_gen.add_data(
+            data,
             color=self._calc_color(r_value),
-            guide_color=guide_color,
+            min_color=self.ACCENT_COLOR,
+            max_color=self.ACCENT_COLOR,
         )
 
+        graph_gen.add_guide_line(y=1, color=self.ACCENT_COLOR)
+
         base_img = self.image
-        fig_mask = GraphGenerator.fig_to_pil(fig)
+        fig_mask = graph_gen.to_img(size=size)
         fig_img = fig_mask.convert('RGB')
 
         pos = [cur_pos - int((img_size / 2))
@@ -1106,4 +1111,3 @@ class NewImageGenerator:
         resize_factor = img.height / height
         new_width = int(img.width / resize_factor)
         return img.resize((new_width, height))
-
