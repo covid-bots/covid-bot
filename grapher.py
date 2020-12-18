@@ -88,6 +88,10 @@ class GraphGenerator:
         range_y = max_y - min_y
         mark_titles_offset = range_y * self.MARK_TEXT_OFFEST
 
+        # Add "markers" in the start and the end of the data
+        self._mark_point(ax, point=(0, data[0]), color=color)
+        self._mark_point(ax, point=(len(data) - 1, data[-1]), color=color)
+
         if min_color is not None:
             x = data.index(min_y)
             self._mark_point(ax, (x, min_y), color=min_color)
@@ -227,7 +231,7 @@ class GraphGenerator:
     @classmethod
     def _mark_point(cls, ax, point: Tuple[float], color="red"):
         config = {**cls.MARKERS_CONFIG,
-                  "facecolor": color}
+                  "facecolor": cls.__normalize_color(color)}
 
         ax.scatter(
             x=point[0],
