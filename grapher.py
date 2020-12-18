@@ -19,10 +19,12 @@ class GraphGenerator:
     }
 
     GUIDE_LINES_CONFIG = {
+        **GENERAL_LINES_CONFIG,
         "linestyle": "dashed",
     }
 
     MAIN_LINES_CONFIG = {
+        **GENERAL_LINES_CONFIG,
         "linewidth": 7
     }
 
@@ -123,8 +125,7 @@ class GraphGenerator:
         x = [0, length - 1]
         y = [y] * 2
 
-        config = {**self.GENERAL_LINES_CONFIG,
-                  **self.GUIDE_LINES_CONFIG,
+        config = {**self.GUIDE_LINES_CONFIG,
                   "color": self.__normalize_color(color),
                   }
 
@@ -182,8 +183,7 @@ class GraphGenerator:
         Edited from https://stackoverflow.com/a/29331211/10671845
         """
 
-        config = {**self.GENERAL_LINES_CONFIG,
-                  **self.MAIN_LINES_CONFIG,
+        config = {**self.MAIN_LINES_CONFIG,
                   "color": self.__normalize_color(color),
                   }
 
@@ -282,4 +282,3 @@ class GraphGenerator:
                   }
 
         ax.text(**config)
-
