@@ -3,6 +3,9 @@ from exceptions import *
 from purl import URL
 import requests
 
+from typing import List, Dict, Set
+import logging
+
 
 class SingleDayData:
     """ Represents Covid data about a single day, from a single country. """
@@ -55,7 +58,11 @@ class SingleDayData:
 class multipleDaysData:
 
     def __init__(self, json_info, last_x_days=None):
-        self.__raw = self.__normalize_data(json_info)
+
+        raw = self.__normalize_data(json_info)
+        self.__raw = self.__modify_to_monotonically_increasing(
+            raw, properties_to_modify={"Recovered", "Confirmed", "Deaths"}
+        )
 
         if last_x_days:
             self.__raw = self.__raw[-last_x_days:]
@@ -74,7 +81,68 @@ class multipleDaysData:
         """ Some countries have more then one province. This method will remove
         the data from the different province, and will only keep the main data.
         """
-        return [day for day in json_info if day["Province"] == '']
+
+        discovered_dates = set()
+        normal_data = list()
+
+        for data in json_info:
+
+            if data["Date"] in discovered_dates:
+
+                # Pull the saved data
+                # & remove the pulled data from the list
+
+                for index, element in enumerate(normal_data):
+                    if element["Date"] == data["Date"]:
+                        saved_data = normal_data.pop(index)
+                        break
+
+                new_data = dict()
+                for key in saved_data:
+
+                    if isinstance(data[key], float) or isinstance(data[key], int):
+                        new_data[key] = saved_data[key] + data[key]
+
+                    if isinstance(data[key], str):
+                        if data[key] in saved_data[key]:
+                            new_data[key] = saved_data[key]
+                        else:
+                            new_data[key] = f"{saved_data[key]}, {data[key]}"
+
+                    else:
+                        new_data[key] = saved_data[key]
+
+                normal_data.append(new_data)
+            else:
+                discovered_dates.add(data["Date"])
+                normal_data.append(data)
+
+        return normal_data
+
+    @staticmethod
+    def __modify_to_monotonically_increasing(data: List[Dict],
+                                             properties_to_modify: Set[str]
+                                             ) -> List[Dict]:
+
+        modified_count = 0
+        modified_max = len(properties_to_modify) * len(data)
+
+        new_data = list(data[0])
+        for prev_i in range(len(data) - 1):
+            cur_i = prev_i + 1
+
+            assert data[cur_i].keys() == data[prev_i].keys()
+            for key in data[cur_i]:
+                if key in properties_to_modify:
+                    if data[prev_i][key] > data[cur_i][key]:
+                        data[cur_i][key] = data[prev_i][key]
+                        modified_count += 1
+
+        if modified_count > 0:
+            logging.warning(
+                f"API: Modified {modified_count} values out of {modified_max} in total ({round(modified_count/modified_max*100, 2)}%)")
+
+        return data
 
     def get_data_before_x_days(self, days: int):
         return self.__daydata[-days]
