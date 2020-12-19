@@ -843,12 +843,12 @@ class NewImageGenerator:
     BACKGROUND_COLORS = {
         # Keys are R values.
         # See method `get_background_color` for more information!
-        0.50:  (24,  205, 244),  # Light blue
-        0.75:  (113, 248, 90),   # Light green
-        1.00:  (191, 248, 18),   # Green, starts to became orange
-        1.125: (248, 170, 18),   # Orange
-        1.25:  (247, 71,  36),   # Red
-        1.75:  (166, 25,  25),   # Dark red
+        0.50: (24,  205, 244),  # Light blue
+        0.75: (113, 248, 90),   # Light green
+        1.00: (191, 248, 18),   # Green, starts to became orange
+        1.25: (248, 170, 18),   # Orange
+        1.50: (247, 71,  36),   # Red
+        1.75: (166, 25,  25),   # Dark red
     }
 
     def __init__(self,
