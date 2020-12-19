@@ -77,8 +77,7 @@ class CovidStatsInstagramBot:
         path. """
 
         # Get data from api
-        data = Covid19API.get_stats(
-            cls.COUNTRY, last_x_days=cls.COMPARE_X_DAYS+1)
+        data = Covid19API.get_stats(cls.COUNTRY)
 
         # Get number of new cases today
         today_diff = data.compare_to_yesterday()
@@ -99,7 +98,7 @@ class CovidStatsInstagramBot:
             img, mid_titles, mid_values, mid_subtitles)
 
         # Add graph
-        cases_a_day = data.get_cases_a_day_list()
+        cases_a_day = data.get_cases_a_day_list()[-cls.COMPARE_X_DAYS:]
         img = ImageGenerator.add_graph(
             cases_a_day, img, title=cls.GRAPH_TITLE)
 

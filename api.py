@@ -57,15 +57,12 @@ class SingleDayData:
 
 class multipleDaysData:
 
-    def __init__(self, json_info, last_x_days=None):
+    def __init__(self, json_info):
 
         raw = self.__normalize_data(json_info)
         self.__raw = self.__modify_to_monotonically_increasing(
             raw, properties_to_modify={"Recovered", "Confirmed", "Deaths"}
         )
-
-        if last_x_days:
-            self.__raw = self.__raw[-last_x_days:]
 
         self.__daydata = [SingleDayData(data) for data in self.__raw]
         self.__daydelta = [
@@ -300,7 +297,7 @@ class Covid19API:
         return url
 
     @classmethod
-    def get_stats(cls, country: str, last_x_days: int = None):
+    def get_stats(cls, country: str):
         """ Returns all cases by case type for a country from the first recorded
         case. """
 
@@ -309,9 +306,4 @@ class Covid19API:
             "dayone", "country", country)
         response_json = cls.__request(request_url)
 
-        return multipleDaysData(response_json, last_x_days=last_x_days)
-
-    @classmethod
-    def get_today_stats(cls, country: str):
-        """ Returns the data Covid data TODAY from the given country. """
-        return cls.get_stats(country, last_x_days=1)[0]
+        return multipleDaysData(response_json)
