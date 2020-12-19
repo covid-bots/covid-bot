@@ -393,7 +393,7 @@ class PosterText:
                 logger.warning(
                     f"{argument} is not a supported argument. Ignoring...")
 
-        return [self._string_manager.convert(line) for line in lines]
+        return [get_display(line) for line in lines]
 
     def set_truetype_font(self, *args, **kwargs):
         """ Saves the argument and keyword arguments that are passed, and uses
@@ -500,7 +500,7 @@ class PosterText:
             # Generate the image - empty transparent
             return Image.new("RGBA", (width, cur_height), color=(255, 255, 255, 0))
 
-        line = self._string_manager.convert(left_lines.pop(0))
+        line = left_lines.pop(0)
         font = self.__get_font(text=line, target_size=width)
 
         height = font.getsize(line)[1]
@@ -533,7 +533,7 @@ class SingleDataPoster:
                  prev: int,
                  string_manager: StringManager = StringManager(),
                  ):
-        self._title_raw = title
+        self._title = title
         self._now = now
         self._prev = prev
 
@@ -545,13 +545,8 @@ class SingleDataPoster:
                 "Argument must be an instance of the `StringManager` object.")
         self._string_manager = sm
 
-        self._title = None  # Indicates that needs to be converted next time accessed
-
     @property
     def title(self,) -> str:
-        if self._title is None:
-            # If not yet generated, generate the title.
-            self._title = self._string_manager.convert(self._title_raw)
         return self._title
 
     @property
@@ -568,7 +563,13 @@ class SingleDataPoster:
 
     @property
     def delta_str(self,) -> str:
-        return self._string_manager.delta_str(self.delta)
+        num = self.now - self.prev
+        if num == 0:
+            return self._string_manager.unchanged
+        elif num > 0:
+            return f"+{num}"
+        else:
+            return str(num)  # automatically adds the `-` sign
 
     @property
     def delta_precentage(self,) -> float:
@@ -633,11 +634,11 @@ class SingleDataPoster:
                           color=(255, 255, 255, 0))
         draw = ImageDraw.Draw(image)
 
-        x = int(width/2)
-        y = 0
+        x, y = int(width/2), 0
 
         # Add title to image
-        draw.text((x, y), self.title, font=title_font, fill=color, anchor="ma")
+        draw.text((x, y), get_display(self.title),
+                  font=title_font, fill=color, anchor="ma")
         y += title_font.getsize(self.title)[1]
         y += pad_title
 

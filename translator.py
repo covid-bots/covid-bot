@@ -2,7 +2,10 @@ import babel
 import babel.languages
 from bidi.algorithm import get_display
 from googletrans import Translator
+
 from typing import Union
+import os
+import json
 
 
 class Country:
@@ -62,6 +65,8 @@ class Country:
 class StringManager:
 
     __BASE_LANG_CODE = "en"
+    __LANG_FOLDER_PATH = "lang_config"
+    __LANG_TRANSLATION_FILENAME_FORMAT = "{code}_translation.json"
 
     def __init__(self,):
         self.translator_delete()
@@ -69,7 +74,18 @@ class StringManager:
     def config_translator(self, dest_lang: str) -> None:
         self.__check_valid_lang_code(dest_lang)
         self.__translator = Translator()
-        self.__dest_lang = dest_lang
+        self.__dest_lang = dest_lang.lower()
+        self.__translations = dict()
+
+        trans_filepath = os.path.join(
+            self.__LANG_FOLDER_PATH, self.__dest_lang,
+            self.__LANG_TRANSLATION_FILENAME_FORMAT.replace(
+                '{code}', self.__dest_lang)
+        )
+
+        if os.path.exists(trans_filepath):
+            with open(trans_filepath, encoding='utf-8') as f:
+                self.__translations = json.load(f)
 
     def config_country_translator(self, country: Union[Country, str]) -> None:
         if not isinstance(country, Country):
@@ -89,11 +105,18 @@ class StringManager:
         """ Delete the configuration of the translator. """
         self.__translator = None
         self.__dest_lang = None
+        self.__translations = dict()
+
+    def from_translations(self, key: str):
+        key = key.lower()
+
+        if key in self.__translations:
+            return self.__translations[key]
 
     def translate(self, string: str,) -> str:
+
         if self.__translator is None:
-            raise PermissionError(
-                "To translate strings, you must configure the translator using the `confign_translator` method.")
+            return None
 
         if self.__dest_lang.lower() == self.__BASE_LANG_CODE.lower():
             return string
@@ -101,28 +124,72 @@ class StringManager:
         return self.__translator.translate(
             string,
             dest=self.__dest_lang,
-            src=self.__BASE_LANG_CODE
+            src=self.__BASE_LANG_CODE,
         ).text
 
-    def convert(self, string: str) -> str:
-        if (self.__translator is not None and
-                self.__dest_lang != self.__BASE_LANG_CODE):
-            string = self.translate(string)
+    def __get_property(self,
+                       key: str,
+                       base_str: str,
+                       **replacing_dict,
+                       ):
 
-        return get_display(string)
+        file_translation = self.from_translations(key)
+        if file_translation is not None:
+            return self.__replace(file_translation, **replacing_dict)
 
-    def delta_str(self, num: int) -> str:
-        if num == 0:
-            return self.unchanged
-        elif num > 0:
-            return f"+{num}"
-        else:
-            return str(num)  # automatically adds the `-` sign
+        base_str = self.__replace(base_str, **replacing_dict)
+        translation = self.translate(base_str)
+        if translation is not None:
+            return translation
+
+        return base_str
+
+    @classmethod
+    def __replace(cls, string: str, **replacing_dict):
+
+        if not replacing_dict:
+            return string
+
+        key = list(replacing_dict.keys())[0]
+        string = string.replace(f"{{{key}}}", str(replacing_dict[key]))
+        del replacing_dict[key]
+
+        return cls.__replace(string, **replacing_dict)
 
     @property
     def unchanged(self,) -> str:
-        return self.convert("Unchanged")
+        return self.__get_property("unchanged", "Unchanged")
 
     @property
     def unavailable(self,) -> str:
-        return self.convert("Unavailable")
+        return self.__get_property("unavailable", "Unavailable")
+
+    @property
+    def deaths(self,) -> str:
+        return self.__get_property("deaths", "Deaths")
+
+    @property
+    def recovered(self,) -> str:
+        return self.__get_property("recovered", "Recovered")
+
+    @property
+    def active_cases(self,) -> str:
+        return self.__get_property("active_cases", "Active Cases")
+
+    @property
+    def new_cases(self,) -> str:
+        return self.__get_property("new_cases", "New Cases")
+
+    @property
+    def basic_reproduction(self,) -> str:
+        return self.__get_property("basic_reproduction", "Basic Reproduction (R)")
+
+    def r_graph_title(self, days: int):
+        return self.__get_property("r_graph_title",
+                                   "Basic reproduction (R) in the last {days} days",
+                                   days=days)
+
+    def new_cases_graph_title(self, days: int):
+        return self.__get_property("new_cases_graph_title",
+                                   "New cases a day in the last {days} days",
+                                   days=days)

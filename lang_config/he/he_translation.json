@@ -1,0 +1,11 @@
+{
+    "deaths": "מתים",
+    "recovered": "מחלימים",
+    "active_cases": "חולים כעת",
+    "new_cases": "חולים חדשים",
+    "basic_reproduction": "מקדם ההדבקה (R)",
+    "unchanged": "ללא שינוי",
+    "unavailable": "לא זמין",
+    "r_graph_title": "מקדם ההדבקה (R) ב-{days} הימים האחרונים",
+    "new_cases_graph_title": "חולים חדשים ביום ב-{days} הימים האחרונים"
+}
