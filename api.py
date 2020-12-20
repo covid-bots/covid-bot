@@ -169,19 +169,27 @@ class multipleDaysData:
     def get_active_cases_list(self,):
         return [daydata.active_cases for daydata in self.__daydata]
 
+    def get_day_delta(self, day_jumps: int = 1):
+        """ Returns a list of `DayDataDiff` object. Each instance
+        compares to the day `day_jumps` days before. For example, if `day_jumps=1`,
+        the returned list will represent the differences between each day. If
+        `day_jumps=7`, each instance will represent the different between this day
+        and the day 7 days before it. """
+
+        return [
+            DayDataDiff(
+                self.__daydata[index],
+                self.__daydata[index-day_jumps]
+            )
+            for index in range(day_jumps, len(self.__daydata))
+        ]
+
     def get_x_cases_a_day_average_list(self, last_x_days: int,):
-        result_len = len(self.__daydelta) - last_x_days + 1
-        result_list = list()
-
-        for cur_start_index in range(result_len):
-            cur_sum = sum(self.__daydelta[cur_start_index + cur_index].confirmed_diff
-                          for cur_index in range(last_x_days))
-            result_list.append(cur_sum / last_x_days)
-
-        return result_list
+        return [delta.confirmed_diff/last_x_days
+                for delta in self.get_day_delta(last_x_days)]
 
     def get_cases_a_day_list(self,):
-        return [daydelta.confirmed_diff for daydelta in self.__daydelta]
+        return [daydelta.confirmed_diff for daydelta in self.get_day_delta()]
 
     def get_r_values(self,):
         """ Calculated using the formula described in:
@@ -196,7 +204,11 @@ class multipleDaysData:
             cur_week = week_averages[cur_index + 7]
             prev_week = week_averages[cur_index]
 
-            cur_r_value = (cur_week / prev_week) ** (4/7)
+            if prev_week == 0:
+                cur_r_value = 1
+            else:
+                cur_r_value = (cur_week / prev_week) ** (4/7)
+
             r_list.append(cur_r_value)
 
         return r_list
@@ -303,7 +315,7 @@ class Covid19API:
 
         # Make a request to the api
         request_url = cls.__create_path_from_segments(
-            "dayone", "country", country)
+            "total", "dayone", "country", country)
         response_json = cls.__request(request_url)
 
         return multipleDaysData(response_json)
