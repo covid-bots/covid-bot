@@ -369,6 +369,36 @@ class SingleDataPoster:
                     pad_icon: int = 0,  # padding between icon and alter text
                     ):
 
+        if self.delta == 0:
+            return self.alter_text(self._string_manager.unchanged, font=font, color=color,)
+
+        elif self.delta_precentage is None:
+            return self.alter_text(self._string_manager.unavailable, font=font, color=color,)
+
+        else:
+            return self.alter_stats_image(font=font, color=color, icon_size=icon_size, pad_icon=pad_icon)
+
+    def alter_text(self,
+                   text: str,
+                   font: ImageFont.ImageFont,
+                   color="black",
+                   ) -> Image.Image:
+
+        size = font.getsize(text)
+        img = Image.new("RGBA", size, color=(255, 255, 255, 0))
+
+        draw = ImageDraw.Draw(img)
+        draw.text((0, 0), text, fill=color, font=font)
+
+        return img
+
+    def alter_stats_image(self,
+                          font: ImageFont.ImageFont,
+                          color="black",
+                          icon_size: int = None,  # None = do not resize
+                          pad_icon: int = 0,  # padding between icon and alter text
+                          ):
+
         size = (self.__calc_alter_width(font=font, icon_size=icon_size, pad_icon=pad_icon),
                 self.__calc_alter_height(font=font, icon_size=icon_size))
 
