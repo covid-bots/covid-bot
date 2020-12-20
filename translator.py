@@ -1,7 +1,9 @@
 import babel
 import babel.languages
+import babel.dates
 from bidi.algorithm import get_display
 from googletrans import Translator
+import datetime
 
 from typing import Union
 import os
@@ -144,17 +146,27 @@ class StringManager:
 
         return base_str
 
-    @classmethod
-    def __replace(cls, string: str, **replacing_dict):
+    def __replace(self, string: str, **replacing_dict):
 
         if not replacing_dict:
             return string
+
+        if "{date}" in string:
+            replaced_date = self.__replace_date(string)
+            return self.__replace(replaced_date, **replacing_dict)
 
         key = list(replacing_dict.keys())[0]
         string = string.replace(f"{{{key}}}", str(replacing_dict[key]))
         del replacing_dict[key]
 
-        return cls.__replace(string, **replacing_dict)
+        return self.__replace(string, **replacing_dict)
+
+    def __replace_date(self, string: str, format="full"):
+        date = datetime.date.today()
+        date_str = babel.dates.format_date(
+            date, format=format, locale=self.__dest_lang)
+
+        return string.replace("{date}", date_str)
 
     @property
     def unchanged(self,) -> str:
@@ -193,3 +205,23 @@ class StringManager:
         return self.__get_property("new_cases_graph_title",
                                    "New cases a day in the last {days} days",
                                    days=days)
+
+    def subtitle(self, username: str = None):
+
+        lines = [
+            self.__replace_date("{date}"),
+            self.__get_property(
+                "third_party", "The information is unofficial and provided by a third party"),
+        ]
+
+        if username is not None:
+            lines.insert(1, username)
+
+        return (" " * 8).join(lines)
+
+    def caption(self, country):
+        return self.__get_property(
+            "caption",
+            "COVID-19 status in {country} - {date} 🦠😷🏥",
+            country=country,
+        )

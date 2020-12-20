@@ -7,5 +7,7 @@
     "unchanged": "ללא שינוי",
     "unavailable": "לא זמין",
     "r_graph_title": "מקדם ההדבקה (R) ב-{days} הימים האחרונים",
-    "new_cases_graph_title": "חולים חדשים ביום ב-{days} הימים האחרונים"
+    "new_cases_graph_title": "חולים חדשים ביום ב-{days} הימים האחרונים",
+    "third_party": "המידע אינו רשמי ומסופק על ידי צד שלישי",
+    "caption": "מצב נגיף הקורונה ב{country} - {date} 🦠😷🏥"
 }

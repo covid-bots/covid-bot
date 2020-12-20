@@ -22,335 +22,6 @@ from grapher import GraphGenerator
 logger = logging.getLogger(__name__)
 
 
-class ImageGenerator:
-
-    BACKGROUND_COLORS = {
-        0:      (105, 191, 226),
-        100:    (105, 226, 185),
-        250:    (111, 226, 105),
-        500:    (168, 226, 105),
-        1_000:  (246, 171, 65),
-        2_500:  (246, 120, 65),
-        5_000:  (246, 65,  65),
-        10_000: (140, 29,  20),
-    }
-
-    ASSETS_FOLDER = os.path.join("assets")
-    RANDOM_BACKGROUND_IMAGES_FOLDER = os.path.join(
-        ASSETS_FOLDER, "backgrounds")
-
-    # - - - T I T L E S - A N D - V A L U E S - - - #
-
-    # Colors
-    TITLE_COLOR = (255, 255, 255)
-    VALUE_COLOR = (255, 255, 255)
-    SUBTITLE_COLOR = (255, 255, 255)
-    FIG_COLOR = (255, 255, 255)
-    BOTTOM_TEXT_COLOR = (255, 255, 255)
-
-    # Font sizes
-    BIG_TITLE_SIZE = 200
-    BIG_VALUE_SIZE = 300
-    SMALL_TITLE_SIZE = 100
-    SMALL_VALUE_SIZE = 150
-    SMALL_SUBTITLE_SIZE = 75
-    BOTTOM_TEXT_SIZE = 25
-
-    # Padding
-    PADDING_BETWEEN_BIG_TITLE_AND_VALUE = 135
-    PADDING_BETWEEN_SMALL_TITLE_AND_VALUE = 75
-    PADDING_BETWEEN_SMALL_VALUE_AND_SUBTITLE = 150
-    SMALL_TITLES_SIDE_PADDING = 200
-    BOTTOM_TEXT_PAD_FROM_BOTTOM = 10
-
-    # Placement
-    BIG_TITLE_Y = 50
-    GRAPH_Y = 600
-    SMALL_TITLES_Y = 1400
-
-    # - - - G R A P H - - - #
-
-    TICKS_ON_GRAPH = 4
-    TODAY_TICK_LABEL = "םויה"
-    X_DAYS_AGO_LABEL = "םימי %s ינפל"
-
-    FIG_SIZE = (6, 3)
-
-    # - - -  F O N T S  - - - #
-
-    FONTS_FOLDER = os.path.join(ASSETS_FOLDER, "fonts")
-    TITLE_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
-    VALUE_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Black.ttf")
-    SUBTITLE_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
-    BOTTOM_TEXT_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Medium.ttf")
-    GRAPH_FONT_NAME = "Heebo"
-    GRAPH_TITLE_WEIGHT = 800
-    GRAPH_TICKS_WEIGHT = 500
-
-    # Load fonts
-    BIG_TITLE_FONT = ImageFont.truetype(
-        TITLE_FONT_PATH, size=BIG_TITLE_SIZE)
-    BIG_VALUE_FONT = ImageFont.truetype(
-        VALUE_FONT_PATH, size=BIG_VALUE_SIZE)
-    SMALL_TITLE_FONT = ImageFont.truetype(
-        TITLE_FONT_PATH, size=SMALL_TITLE_SIZE)
-    SMALL_VALUE_FONT = ImageFont.truetype(
-        VALUE_FONT_PATH, size=SMALL_VALUE_SIZE)
-    SMALL_SUBTITLE_FONT = ImageFont.truetype(
-        SUBTITLE_FONT_PATH, size=SMALL_SUBTITLE_SIZE)
-    BOTTOM_TEXT_FONT = ImageFont.truetype(
-        BOTTOM_TEXT_FONT_PATH, size=BOTTOM_TEXT_SIZE)
-
-    @classmethod
-    def generate_tick_labels(cls, num_of_days):
-
-        ticks = list()
-        labels = list()
-
-        if cls.TICKS_ON_GRAPH >= 1:
-            ticks.append(num_of_days)
-            labels.append(cls.TODAY_TICK_LABEL)
-
-            if cls.TICKS_ON_GRAPH != 1:
-                cur_tick = 0
-                tick_jumps = int(num_of_days / (cls.TICKS_ON_GRAPH - 1))
-
-                while (cur_tick + tick_jumps <= num_of_days):
-                    cur_tick_days_ago = str(num_of_days-cur_tick)
-                    labels.append(cls.X_DAYS_AGO_LABEL.replace(
-                        '%s', cur_tick_days_ago))
-                    ticks.append(cur_tick)
-                    cur_tick += tick_jumps
-
-        return [ticks, labels]
-
-    @classmethod
-    def save_plot_daydata(cls, data: List, path, dpi=None, title: str = None):
-
-        # Load custom fonts
-        fonts = font_manager.findSystemFonts(fontpaths=cls.FONTS_FOLDER)
-        for font in fonts:
-            font_manager.fontManager.addfont(font)
-
-        _, ax = plt.subplots()
-
-        if title:
-            ax.set_title(title, fontname=cls.GRAPH_FONT_NAME,
-                         fontweight=cls.GRAPH_TITLE_WEIGHT)
-
-        # Set axes width
-        mpl.rcParams['axes.linewidth'] = 2
-
-        # Plot given data
-        plt.plot(data, c="k", linewidth=3,
-                 solid_capstyle="round", solid_joinstyle="round")
-
-        # Add arrows to axes
-        ax.plot(1, 0, ">k", transform=ax.get_yaxis_transform(), clip_on=False)
-        ax.plot(0, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False)
-
-        # Hide top and right axes
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-
-        # Set (0,0) point to be the left bottom point in the graph
-        pylab.xlim(xmin=0)
-        pylab.ylim(ymin=0)
-
-        # Add custom ticks
-        [ticks, labels] = cls.generate_tick_labels(len(data))
-        plt.xticks(ticks=ticks, labels=labels,
-                   fontname=cls.GRAPH_FONT_NAME, fontweight=cls.GRAPH_TICKS_WEIGHT)
-        plt.yticks(fontname=cls.GRAPH_FONT_NAME,
-                   fontweight=cls.GRAPH_TICKS_WEIGHT)
-
-        # Set figure size
-        fig = plt.gcf()
-        fig.set_size_inches(cls.FIG_SIZE[0], cls.FIG_SIZE[1])
-
-        # Save the figure
-        plt.savefig(path, dpi=dpi)
-
-    @classmethod
-    def add_graph(cls, data: List, base_img: Image.Image, title=None):
-
-        TEMP_FILE_PATH = "TEMPFIG.png"
-
-        # Generate the figure, and load it to PIL.
-        cls.save_plot_daydata(data, TEMP_FILE_PATH, title=title, dpi=250)
-        graph = Image.open(TEMP_FILE_PATH).convert("L")
-        os.remove(TEMP_FILE_PATH)
-
-        # Create the mask layer
-        graph_mask = Image.new("L", size=base_img.size, color="white")
-
-        # Paste the graph onto the graph mask, in the desired location.
-        paste_x = int((graph_mask.width - graph.width) / 2)
-        paste_y = cls.GRAPH_Y
-        graph_mask.paste(graph, box=(paste_x, paste_y))
-
-        # Now, `graph_mask` represents the true black and white mask.
-        # It's time to composite it with the base image!
-
-        # Create a solid with the desired figure color
-        solid_graph = Image.new(
-            "RGBA", size=base_img.size, color=cls.FIG_COLOR)
-
-        return Image.composite(base_img, solid_graph, graph_mask)
-
-    @classmethod
-    def add_big_title(cls, base_img: Image.Image, title: str, value: str):
-
-        draw = ImageDraw.Draw(base_img)
-        x = base_img.width / 2
-        y = cls.BIG_TITLE_Y
-
-        draw.text((x, y), text=title, fill=cls.TITLE_COLOR,
-                  font=cls.BIG_TITLE_FONT, anchor="ma")
-
-        y += cls.PADDING_BETWEEN_BIG_TITLE_AND_VALUE
-
-        draw.text((x, y), text=value, fill=cls.VALUE_COLOR,
-                  font=cls.BIG_VALUE_FONT, anchor="ma")
-
-    @classmethod
-    def __add_small_title(cls, img: Image.Image, xy: Tuple[int, int], title: str, value: str, subtitle: str):
-
-        draw = ImageDraw.Draw(img)
-        x, y = xy
-
-        draw.text((x, y), text=title, fill=cls.TITLE_COLOR,
-                  font=cls.SMALL_TITLE_FONT, anchor="ma")
-
-        y += cls.PADDING_BETWEEN_SMALL_TITLE_AND_VALUE
-
-        draw.text((x, y), text=value, fill=cls.VALUE_COLOR,
-                  font=cls.SMALL_VALUE_FONT, anchor="ma")
-
-        y += cls.PADDING_BETWEEN_SMALL_VALUE_AND_SUBTITLE
-
-        draw.text((x, y), text=subtitle, fill=cls.SUBTITLE_COLOR,
-                  font=cls.SMALL_SUBTITLE_FONT, anchor="ma")
-
-    @classmethod
-    def add_small_titles_row(cls,
-                             img: Image.Image,
-                             titles_list: List[int],
-                             values_list: List[int],
-                             subtitles_list: List[int],
-                             ):
-        padding = cls.SMALL_TITLES_SIDE_PADDING
-        x_jumps = (img.width - padding) / len(titles_list)
-        x = (x_jumps + padding) / 2
-        y = cls.SMALL_TITLES_Y
-
-        for title, value, subtitle in zip(titles_list, values_list, subtitles_list):
-            cls.__add_small_title(img, (x, y), title, value, subtitle)
-            x += x_jumps
-
-    @classmethod
-    def generate_base_img(cls, new_cases: int):
-        """ Returns an `Image` object that represents the background of the image. """
-
-        # Choose random background
-        files = os.listdir(cls.RANDOM_BACKGROUND_IMAGES_FOLDER)
-        random_file = random.choice(files)
-
-        # Load random background
-        random_img = Image.open(
-            os.path.join(cls.RANDOM_BACKGROUND_IMAGES_FOLDER, random_file))
-
-        # Load background color image
-        bg_color = cls.get_background_color(new_cases)
-        background_img = Image.new("RGBA", random_img.size, color=bg_color)
-
-        # Join two images
-        return Image.alpha_composite(background_img, random_img)
-
-    @classmethod
-    def get_background_color(cls, new_cases: int):
-        """ Returns a color that represents the number of new cases.
-        If the number is high, the color will red, and if its low, it will slowly
-        transform into orange -> yellow -> green -> blue.
-        Uses the `cls.BACKGROUND_COLORS` dict
-        """
-
-        low_neighbor = None
-        high_neighbor = None
-
-        color_numbers = list(cls.BACKGROUND_COLORS.keys())
-        color_numbers.sort()
-
-        for cur_color_i, cur_color_num in enumerate(color_numbers):
-            if new_cases <= cur_color_num:
-                low_neighbor = cur_color_i - 1
-                break
-
-        # If the given num is lower then the minimum color num
-        if cur_color_i == -1:
-            return color_numbers[0]
-
-        # If the given num is higher then the maximum color num
-        if low_neighbor == None:
-            return color_numbers[-1]
-
-        # - - - - - - - - - - - - - - - - - - - #
-        # If the given num is somewhere between #
-
-        high_neighbor = color_numbers[low_neighbor + 1]
-        low_neighbor = color_numbers[low_neighbor]
-
-        high_neighbor_color = cls.BACKGROUND_COLORS[high_neighbor]
-        low_neighbor_color = cls.BACKGROUND_COLORS[low_neighbor]
-
-        new_cases_fixed = new_cases - low_neighbor
-        neighbors_delta = high_neighbor - low_neighbor
-
-        high_neighbor_force = new_cases_fixed / neighbors_delta
-        low_neighbor_force = 1 - high_neighbor_force
-
-        new_color = [
-            int(
-                (low_color_elem * low_neighbor_force) +
-                (high_color_elem * high_neighbor_force)
-            )
-            for low_color_elem, high_color_elem in zip(low_neighbor_color, high_neighbor_color)
-        ]
-
-        return tuple(new_color)
-
-    @classmethod
-    def test_background_gradint(cls, from_: int, to: int, jumps: int = 1):
-
-        width = math.ceil((to - from_) / jumps)
-        height = int(width / 5)
-
-        img = Image.new("RGB", (width, height))
-        draw = ImageDraw.Draw(img)
-
-        for cur_index, cur_color_num in enumerate(range(from_, to, jumps)):
-
-            color = cls.get_background_color(cur_color_num)
-
-            p1 = (cur_index, 0)
-            p2 = (cur_index, height)
-
-            draw.line([p1, p2], fill=color, width=1)
-
-        return img
-
-    @classmethod
-    def add_bottom_test(cls, img: Image.Image, text: str):
-
-        draw = ImageDraw.Draw(img)
-
-        x = img.width / 2
-        y = img.height - cls.BOTTOM_TEXT_PAD_FROM_BOTTOM
-
-        draw.text(xy=(x, y), text=text, font=cls.BOTTOM_TEXT_FONT,
-                  color=cls.BOTTOM_TEXT_COLOR, anchor="mb")
-
-
 class PosterText:
     """
     Represents a collection of words, sencenses, or lines. Has a method called
@@ -799,14 +470,11 @@ class SingleDataPoster:
         ]))
 
 
-class NewImageGenerator:
+class ImageGenerator:
 
     ASSETS_FOLDER = "assets"
     FONTS_FOLDER = os.path.join(ASSETS_FOLDER, "fonts")
 
-    ACCENT_COLOR = '#424242'
-
-    POSTER_TEXT_COLOR = ACCENT_COLOR
     POSTER_FONT_PATH = os.path.join(FONTS_FOLDER, "Heebo-Black.ttf")
 
     # Perecentage: values between 0 and 1,
@@ -823,6 +491,9 @@ class NewImageGenerator:
         FONTS_FOLDER, 'Heebo-Black.ttf'), size=100)
 
     DATA_PADDING_FROM_SIDES = 0.2  # Perecentage - 1 is the whole width of the image
+    SUBTITLE_PADDING = 0.01
+    SUBTITLE_FONT = ImageFont.truetype(os.path.join(
+        FONTS_FOLDER, 'Heebo-Medium.ttf'), size=25)
 
     SINGLE_DATA_POSTER_ARGUMENTS = {
         "data_font": DATA_FONT,
@@ -902,7 +573,8 @@ class NewImageGenerator:
                          # 0 is the top, 1/2 is the middle and 1 is the bottom.
                          # middle is the default (:
 
-                         side: str = "m"
+                         side: str = "m",
+                         color: str = "black",
                          ):
 
         # Assert good `side` value
@@ -930,8 +602,8 @@ class NewImageGenerator:
         # Generate poster image
         poster_img = poster.to_image(
             width=self._precentage_of_width(self.POSTER_WIDTH),
-            color=self.POSTER_TEXT_COLOR,
-            padding=self._precentage_of_height(self.POSTER_PADDING_TITLES)
+            padding=self._precentage_of_height(self.POSTER_PADDING_TITLES),
+            color=color,
         )
 
         x -= int(poster_img.width / 2)
@@ -984,6 +656,7 @@ class NewImageGenerator:
                   relative_pos: Tuple[int],
                   title: str = None,
                   title_color=None,
+                  accent_color="black",
                   ):
 
         size = tuple([self._precentage_of_width(cur) for cur in relative_size])
@@ -997,8 +670,8 @@ class NewImageGenerator:
 
         graph_gen.add_data(
             data,
-            min_color=self.ACCENT_COLOR,
-            max_color=self.ACCENT_COLOR,
+            min_color=accent_color,
+            max_color=accent_color,
             color=self._calc_color(r_value),
         )
 
@@ -1020,6 +693,7 @@ class NewImageGenerator:
                            relative_pos: Tuple[int],
                            title: str = None,
                            title_color=None,
+                           accent_color="black",
                            ):
 
         size = tuple([self._precentage_of_width(cur) for cur in relative_size])
@@ -1034,11 +708,11 @@ class NewImageGenerator:
         graph_gen.add_data(
             data,
             color=self._calc_color(r_value),
-            min_color=self.ACCENT_COLOR,
-            max_color=self.ACCENT_COLOR,
+            min_color=accent_color,
+            max_color=accent_color,
         )
 
-        graph_gen.add_guide_line(y=1, color=self.ACCENT_COLOR)
+        graph_gen.add_guide_line(y=1, color=accent_color)
 
         base_img = self.image
         fig_mask = graph_gen.to_img(size=size)
@@ -1049,6 +723,24 @@ class NewImageGenerator:
 
         base_img.paste(fig_img, box=pos, mask=fig_mask)
         self._update_image(base_img)
+
+    def add_subtitle(self, string: str, color="black"):
+        """ Adds a subtitle to the image. """
+
+        padding = self._precentage_of_height(self.SUBTITLE_PADDING)
+        font = self.SUBTITLE_FONT
+
+        img = self.image
+        draw = ImageDraw.Draw(img)
+        size_x, size_y = img.size
+
+        text_x = int(size_x / 2)
+        text_y = size_y - padding
+
+        draw.text((text_x, text_y), get_display(string),
+                  font=font, fill=color, anchor="ms")
+
+        self._update_image(img)
 
     # - - - P R I V A T E - A N D - P R O T E C T E D - - - #
 
