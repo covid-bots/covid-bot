@@ -282,7 +282,7 @@ class Covid19API:
     def __request(url: URL) -> list:
         """ Make an http request, and check for errors. """
 
-        response = requests.get(url=url.as_string())
+        response = requests.get(url=url.as_string(), verify=False)
 
         # Check if data loaded correctly
         if response.status_code != 200:
