@@ -22,7 +22,7 @@ logger.setLevel(logging.INFO)
 logger.addHandler(file_handler)
 
 
-class NewCovidStatsInstagramBot:
+class CovidStatsInstagramBot:
 
     TEMPLATE_IMAGE_PATH = os.path.join('assets', 'background-template.png')
     STATS_OF_X_DAYS = 60
@@ -30,7 +30,7 @@ class NewCovidStatsInstagramBot:
     SUBTITLES_COLOR = "#aaaaaa"
     ACCENT_COLOR = "#424242"
 
-    def __init__(self, country_code: str,):
+    def __init__(self, country_code: str, username: str = None):
         self._country = Country(country_code)
 
         sm = StringManager()
@@ -38,25 +38,25 @@ class NewCovidStatsInstagramBot:
         self._string_manager = sm
 
         self.__data = None
-        self.__insta_username = os.environ.get("COVID_INSTAGRAM_USERNAME")
-        self.__insta_password = os.environ.get("COVID_INSTAGRAM_PASSWORD")
+        self.__insta_username = username
 
     @property
     def instagram_username(self,):
         return self.__insta_username
-
-    @property
-    def instagram_password(self,):
-        return self.__insta_password
 
     def get_data(self,) -> multipleDaysData:
         if self.__data is None:
             self.__data = Covid19API.get_stats(self._country.code)
         return self.__data
 
-    def to_image(self,) -> Image.Image:
+    def to_image(self,
+                 username: str = None,
+                 ) -> Image.Image:
         """ Returns a Pillow Image instance that represents the covid
         status in the country. """
+
+        if username is None:
+            username = self.instagram_username
 
         data = self.get_data()
 
@@ -133,56 +133,63 @@ class NewCovidStatsInstagramBot:
             accent_color=self.ACCENT_COLOR,
         )
 
-        subtitle_string = self._string_manager.subtitle(
-            username=self.instagram_username)
+        subtitle_string = self._string_manager.subtitle(username=username)
         img_gen.add_subtitle(subtitle_string, color=self.SUBTITLES_COLOR)
 
         return img_gen.image
 
     def upload_image(self,
                      img_path: str,
+                     password: str,
+                     username: str = None,
                      caption: str = None,
                      ):
         """ Recives a path to an image, and uploads the given image to the
         Instagram account saved in the login info file.
         """
 
-        if (not self.instagram_username) or (not self.instagram_password):
-            raise ValueError(
-                "Environment variables not found.\nPlease set the environment variables 'COVID_INSTAGRAM_USERNAME' and 'COVID_INSTAGRAM_PASSWORD'."
-            )
+        if username is None:
+            username = self.instagram_username
 
-        # Load the Instagram bot
         bot = Instabot()
-        bot.login(username=self.instagram_username,
-                  password=self.instagram_password)
-
-        # upload the given photo
+        bot.login(username=username, password=password)
         bot.upload_photo(img_path, caption=caption, options={"rename": False})
 
     def genereate_and_upload(self,
+                             password: str,
+                             username: str = None,
                              temp_image_name: str = "tempimg.jpg",
                              ):
         """ Generate a new image, and upload it to Instagram. """
 
+        if username is None:
+            username = self.instagram_username
+
         # Generate and save the covid image.
-        img = self.to_image().convert("RGB")
+        img = self.to_image(username=username).convert("RGB")
         img.save(temp_image_name)
 
         # Upload the image to instagram
         caption = self.get_caption()
-        self.upload_image(temp_image_name, caption,)
+        self.upload_image(temp_image_name, caption,
+                          username=username, password=password)
 
         os.remove(temp_image_name)
 
-    def upload_if_new_data(self,):
+    def upload_if_new_data(self,
+                           password: str,
+                           username: str = None,
+                           ):
+
+        if username is None:
+            username = self.instagram_username
 
         logger.info("Checking for new information...")
 
         if Covid19API.get_changes().check_if_new(self._country.code):
             # If there is new data
             logger.info("New data found, generating and uploading image.")
-            self.genereate_and_upload()
+            self.genereate_and_upload(username=username, password=password)
 
         else:
             # If there is no new data...
@@ -195,4 +202,8 @@ class NewCovidStatsInstagramBot:
 
 
 if __name__ == "__main__":
-    NewCovidStatsInstagramBot('il').upload_if_new_data()
+    username = os.environ.get("COVID_INSTAGRAM_USERNAME")
+    password = os.environ.get("COVID_INSTAGRAM_PASSWORD")
+
+    bot = CovidStatsInstagramBot('il', username=username)
+    bot.upload_if_new_data(password=password)
