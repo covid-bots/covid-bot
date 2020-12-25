@@ -346,7 +346,11 @@ class CountryDataChanges:
         self._data_path = data_file
 
         self._dates = {
-            element["CountryCode"].lower(): element["Date"]
+            element["CountryCode"].lower(): {
+                key: element[key]
+                for key in element
+                if isinstance(element[key], int)
+            }
             for element in json_data
         }
 
