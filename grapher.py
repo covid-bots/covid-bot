@@ -8,6 +8,8 @@ import os
 
 from typing import Tuple, List, Union, Optional
 
+from translator import StringManager
+
 
 class GraphGenerator:
 
@@ -47,10 +49,20 @@ class GraphGenerator:
 
     MARK_TEXT_OFFEST = 0.125  # relative to the height of the figure
 
-    def __init__(self,):
+    def __init__(self,
+                 string_manager: StringManager = StringManager(),
+                 ):
         self._data = list()
         self._guides = list()
         self._title = (None, None)
+
+        self.set_string_manager(string_manager)
+
+    def set_string_manager(self, sm: StringManager) -> None:
+        if not isinstance(sm, StringManager):
+            raise TypeError(
+                "Argument must be an instance of the `StringManager` object.")
+        self._string_manager = sm
 
     def add_data(self,
                  data: List[float],
@@ -261,8 +273,7 @@ class GraphGenerator:
             **config,
         )
 
-    @classmethod
-    def _mark_text_point(cls,
+    def _mark_text_point(self,
                          ax,
                          point: Tuple[float],
                          color,
@@ -270,11 +281,12 @@ class GraphGenerator:
                          offset: float,
                          ) -> None:
         x, y = point
-        x_str, y_str = str(round(x, 2)), str(round(y, 2))
+        x_str = self._string_manager.format_number(x, floating_max=3)
+        y_str = self._string_manager.format_number(y, floating_max=3)
 
-        text = text.replace("{x}", str(x_str)).replace("{y}", str(y_str))
+        text = text.replace("{x}", x_str).replace("{y}", y_str)
 
-        config = {**cls.TEXT_CONFIG,
+        config = {**self.TEXT_CONFIG,
                   "x": x,
                   "y": y+offset,
                   "s": get_display(text),

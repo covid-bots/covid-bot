@@ -1,6 +1,7 @@
 import babel
 import babel.languages
 import babel.dates
+import locale
 from bidi.algorithm import get_display
 from googletrans import Translator
 import datetime
@@ -72,6 +73,35 @@ class StringManager:
 
     def __init__(self,):
         self.translator_delete()
+
+    def format_number(self,
+                      number: Union[int, float],
+                      leading_zeros: int = None,
+                      floating_max: int = None,
+                      ) -> str:
+        """ Recives a number as a float or an integer, and returns it as a string.
+        This takes into consideration that some languages use `.` to separate 
+        thousends, and other languages use `,` - The same thing goes with the
+        floating point (`.` or `,`).
+        """
+
+        string = "{number:n}"
+
+        if leading_zeros:
+            string = string.replace(':', f':0{leading_zeros}')
+
+        if floating_max and isinstance(number, float):
+            string = string.replace('n}', f'.{floating_max}n}}')
+
+        lang = self.__dest_lang
+        if lang is None:
+            lang = self.__BASE_LANG_CODE
+
+        locale.setlocale(locale.LC_ALL, locale=lang)
+        string = string.format(number=number)
+        locale.setlocale(locale.LC_ALL, '')  # Reset back to default
+
+        return string
 
     def config_translator(self, dest_lang: str) -> None:
         self.__check_valid_lang_code(dest_lang)

@@ -2,6 +2,7 @@ from PIL import Image
 import os
 from instabot import Bot as Instabot
 from datetime import datetime
+import locale
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -35,7 +36,7 @@ class CovidStatsInstagramBot:
 
         sm = StringManager()
         sm.config_country_translator(self._country)
-        self._string_manager = sm
+        self._sm = sm
 
         self.__data = None
         self.__insta_username = username
@@ -64,23 +65,23 @@ class CovidStatsInstagramBot:
         today_r_value = data.last_day_r_value()
 
         img_gen = ImageGenerator(Image.open(self.TEMPLATE_IMAGE_PATH))
-        img_gen.set_string_manager(self._string_manager)
+        img_gen.set_string_manager(self._sm)
 
         img_gen.add_background(today_r_value)
         img_gen.add_data(
             data=[
                 SingleDataPoster(
-                    self._string_manager.deaths,
+                    self._sm.deaths,
                     now=yesterday_compare.new.deaths,
                     prev=yesterday_compare.old.deaths,
                 ),
                 SingleDataPoster(
-                    self._string_manager.active_cases,
+                    self._sm.active_cases,
                     now=yesterday_compare.new.active_cases,
                     prev=yesterday_compare.old.active_cases,
                 ),
                 SingleDataPoster(
-                    self._string_manager.recovered,
+                    self._sm.recovered,
                     now=yesterday_compare.new.recovered_cases,
                     prev=yesterday_compare.old.recovered_cases,
                 ),
@@ -91,8 +92,9 @@ class CovidStatsInstagramBot:
 
         img_gen.add_poster_title(
             PosterText([
-                self._string_manager.new_cases,
-                yesterday_compare.confirmed_diff_str(min_len=4),
+                self._sm.new_cases,
+                self._sm.format_number(
+                    yesterday_compare.confirmed_diff, leading_zeros=4),
             ]),
             y_relative=0.45,
             side="l",
@@ -105,7 +107,7 @@ class CovidStatsInstagramBot:
             r_value=today_r_value,
             relative_size=(0.475, 0.250),
             relative_pos=(0.7, 0.475),
-            title=self._string_manager.new_cases_graph_title(
+            title=self._sm.new_cases_graph_title(
                 days=len(cases_data)),
             title_color=self.SUBTITLES_COLOR,
             accent_color=self.ACCENT_COLOR,
@@ -113,8 +115,8 @@ class CovidStatsInstagramBot:
 
         img_gen.add_poster_title(
             PosterText([
-                self._string_manager.basic_reproduction,
-                f"{today_r_value:.2f}",
+                self._sm.basic_reproduction,
+                self._sm.format_number(today_r_value, floating_max=3),
             ]),
             y_relative=0.75,
             side="r",
@@ -128,12 +130,12 @@ class CovidStatsInstagramBot:
             guide_color=self.ACCENT_COLOR,
             relative_size=(0.475, 0.250),
             relative_pos=(0.3, 0.775),
-            title=self._string_manager.r_graph_title(days=len(r_value_data)),
+            title=self._sm.r_graph_title(days=len(r_value_data)),
             title_color=self.SUBTITLES_COLOR,
             accent_color=self.ACCENT_COLOR,
         )
 
-        subtitle_string = self._string_manager.subtitle(username=username)
+        subtitle_string = self._sm.subtitle(username=username)
         img_gen.add_subtitle(subtitle_string, color=self.SUBTITLES_COLOR)
 
         return img_gen.image
@@ -153,7 +155,8 @@ class CovidStatsInstagramBot:
 
         bot = Instabot()
         bot.login(username=username, password=password)
-        bot.upload_photo(img_path, caption=caption, options={"rename": False})
+        bot.upload_photo(img_path, caption=caption,
+                         options={"rename": False})
 
     def genereate_and_upload(self,
                              password: str,
@@ -198,7 +201,7 @@ class CovidStatsInstagramBot:
     def get_caption(self,):
         country_code = self._country.code.upper()
         country_name = self._country.lang_locale.territories[country_code]
-        return self._string_manager.caption(country=country_name)
+        return self._sm.caption(country=country_name)
 
 
 if __name__ == "__main__":

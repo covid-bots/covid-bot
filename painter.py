@@ -225,6 +225,10 @@ class SingleDataPoster:
         return self._now
 
     @property
+    def now_str(self,) -> str:
+        return self._string_manager.format_number(self.now)
+
+    @property
     def prev(self,) -> int:
         return self._prev
 
@@ -237,10 +241,13 @@ class SingleDataPoster:
         num = self.now - self.prev
         if num == 0:
             return self._string_manager.unchanged
-        elif num > 0:
-            return f"+{num}"
-        else:
-            return str(num)  # automatically adds the `-` sign
+
+        str_num = self._string_manager.format_number(num)
+
+        if num > 0:
+            str_num = "+" + str_num
+
+        return str_num
 
     @property
     def delta_precentage(self,) -> float:
@@ -254,7 +261,10 @@ class SingleDataPoster:
     def delta_precentage_str(self,):
         if self.delta_precentage is None:
             return self._string_manager.unavailable
-        return f"{abs(self.delta_precentage):.1f}%"
+
+        num = abs(self.delta_precentage)
+        string = self._string_manager.format_number(num, floating_max=2)
+        return f'{string}%'
 
     def to_image(self,
                  data_font: ImageFont.ImageFont,
@@ -314,9 +324,9 @@ class SingleDataPoster:
         y += pad_title
 
         # Add data to image
-        draw.text((x, y), str(self.now), font=data_font,
+        draw.text((x, y), self.now_str, font=data_font,
                   fill=color, anchor="ma")
-        y += data_font.getsize(str(self.now))[1]
+        y += data_font.getsize(self.now_str)[1]
         y += int(pad_data / 2)
 
         # Add line to image, if needed
@@ -351,7 +361,7 @@ class SingleDataPoster:
             font=alter_font, icon_size=icon_size
         )
 
-        data_height = data_font.getsize(str(self.now))[1]
+        data_height = data_font.getsize(self.now_str)[1]
         title_height = title_font.getsize(self.title)[1]
 
         return math.ceil(sum([
@@ -484,7 +494,7 @@ class SingleDataPoster:
                            pad_icon: int,
                            ) -> int:
 
-        data_width = data_font.getsize(str(self.now))[0]
+        data_width = data_font.getsize(self.now_str)[0]
         title_width = title_font.getsize(self.title)[0]
         alter_width = self.__calc_alter_width(
             font=alter_font, icon_size=icon_size, pad_icon=pad_icon)
@@ -695,7 +705,7 @@ class ImageGenerator:
             self._precentage_of_height(relative_pos[1])
         )
 
-        graph_gen = GraphGenerator()
+        graph_gen = GraphGenerator(string_manager=self._string_manager)
         graph_gen.set_title(title, title_color)
 
         graph_gen.add_data(
@@ -732,7 +742,7 @@ class ImageGenerator:
             self._precentage_of_height(relative_pos[1])
         )
 
-        graph_gen = GraphGenerator()
+        graph_gen = GraphGenerator(string_manager=self._string_manager)
         graph_gen.set_title(title, title_color)
 
         graph_gen.add_data(
