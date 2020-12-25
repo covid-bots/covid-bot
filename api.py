@@ -2,6 +2,7 @@ from exceptions import *
 
 from purl import URL
 import requests
+import json
 
 from typing import List, Dict, Set
 import logging
@@ -328,3 +329,57 @@ class Covid19API:
         response_json = cls.__request(request_url)
 
         return multipleDaysData(response_json)
+
+    @classmethod
+    def get_changes(cls):
+        request_url = cls.__create_path_from_segments("summary")
+        response_json = cls.__request(request_url)
+        return CountryDataChanges(response_json["Countries"])
+
+
+class CountryDataChanges:
+
+    def __init__(self,
+                 json_data: list,
+                 data_file: str = "PREV_DATA.json",
+                 ):
+        self._data_path = data_file
+
+        self._dates = {
+            element["CountryCode"].lower(): element["Date"]
+            for element in json_data
+        }
+
+        self._saved_dates = self._load_data()
+        self._save_data()
+
+    def _save_data(self):
+        with open(self._data_path, 'w') as f:
+            json.dump(self._dates, f, indent=4)
+
+    def _load_data(self):
+        try:
+            with open(self._data_path) as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return None
+
+    def check_if_new(self, country_code: str) -> bool:
+
+        if not isinstance(country_code, str):
+            raise TypeError("Country code must be a string.")
+
+        if len(country_code) != 2:
+            raise ValueError("Country code must be a two character string.")
+
+        if self._saved_dates is None:
+            # If there is no saved data
+            return True
+
+        country_code = country_code.lower()
+
+        if country_code not in self._saved_dates or country_code not in self._dates:
+            return True
+
+        # returns `True` if the date in the old save is different from the current date.
+        return self._dates[country_code] != self._saved_dates[country_code]

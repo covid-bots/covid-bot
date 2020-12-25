@@ -2,7 +2,6 @@ from PIL import Image
 import os
 from instabot import Bot as Instabot
 from datetime import datetime
-import json
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -180,57 +179,19 @@ class NewCovidStatsInstagramBot:
 
         logger.info("Checking for new information...")
 
-        data = self.get_data()
-        today_json = {"date": data.get_today().date}
+        if Covid19API.get_changes().check_if_new(self._country.code):
+            # If there is new data
+            logger.info("New data found, generating and uploading image.")
+            self.genereate_and_upload()
 
-        if not DataStorageManager.diff_from_saved_data(today_json):
+        else:
             # If there is no new data...
             logger.info("No new data found.")
-            return
-
-        # If there is new data
-        logger.info("New data found, generating and uploading image.")
-        self.genereate_and_upload()
-        DataStorageManager.save_data(today_json)
 
     def get_caption(self,):
         country_code = self._country.code.upper()
         country_name = self._country.lang_locale.territories[country_code]
         return self._string_manager.caption(country=country_name)
-
-
-class DataStorageManager:
-
-    DATA_FILE = "PREV_DATA.json"
-
-    @classmethod
-    def save_data(cls, data: dict):
-        """ Saves the given data dict as a json file,
-        in the file specified with the `DATA_FILE` property.
-        """
-
-        with open(cls.DATA_FILE, 'w') as f:
-            json.dump(data, f, indent=4)
-
-    @classmethod
-    def load_data(cls):
-        """ Returns the data in the file specified with the `DATA_FILE`
-        property. """
-
-        try:
-            with open(cls.DATA_FILE) as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return None
-
-    @classmethod
-    def diff_from_saved_data(cls, data: dict):
-        """ Returns a boolean value. `True` if the given data is different
-        and does not match the saved data (or if there is no saved data),
-        and `False` if the saved data matches the given data. """
-
-        saved_data = cls.load_data()
-        return not saved_data == data
 
 
 if __name__ == "__main__":
