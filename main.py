@@ -93,7 +93,7 @@ class NewCovidStatsInstagramBot:
         img_gen.add_poster_title(
             PosterText([
                 self._string_manager.new_cases,
-                str(yesterday_compare.confirmed_diff),
+                yesterday_compare.confirmed_diff_str(min_len=4),
             ]),
             y_relative=0.45,
             side="l",

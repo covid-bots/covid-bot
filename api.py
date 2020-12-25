@@ -204,6 +204,9 @@ class multipleDaysData:
             cur_week = week_averages[cur_index + 7]
             prev_week = week_averages[cur_index]
 
+            if cur_week == 0:
+                cur_r_value = 0
+
             if prev_week == 0:
                 cur_r_value = 1
             else:
@@ -240,6 +243,12 @@ class DayDataDiff:
     @staticmethod
     def __generate_percentage_diff(newest_data, older_data):
         return (newest_data / older_data - 1) * 100
+
+    def confirmed_diff_str(self, min_len: int = 0):
+        diff = str(self.confirmed_diff)
+        zeros_to_add = max([min_len - len(diff), 0])
+        zeros = "0" * zeros_to_add
+        return zeros + diff
 
     @property
     def confirmed_diff(self):
