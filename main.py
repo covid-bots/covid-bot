@@ -174,7 +174,7 @@ class CovidStatsInstagramBot:
 
         # Upload the image to instagram
         caption = self.get_caption()
-        self.upload_image(temp_image_name, caption,
+        self.upload_image(img_path=temp_image_name, caption=caption,
                           username=username, password=password)
 
         os.remove(temp_image_name)
