@@ -96,7 +96,7 @@ class CovidStatsInstagramBot:
                 self._sm.format_number(
                     yesterday_compare.confirmed_diff, leading_zeros=4),
             ]),
-            y_relative=0.45,
+            y_relative=0.425,
             side="l",
             color=self.ACCENT_COLOR,
         )
@@ -106,7 +106,7 @@ class CovidStatsInstagramBot:
             data=cases_data,
             r_value=today_r_value,
             relative_size=(0.475, 0.250),
-            relative_pos=(0.7, 0.475),
+            relative_pos=(0.7, 0.45),
             title=self._sm.new_cases_graph_title(
                 days=len(cases_data)),
             title_color=self.SUBTITLES_COLOR,
@@ -118,7 +118,7 @@ class CovidStatsInstagramBot:
                 self._sm.basic_reproduction,
                 self._sm.format_number(today_r_value, floating_max=3),
             ]),
-            y_relative=0.75,
+            y_relative=0.725,
             side="r",
             color=self.ACCENT_COLOR,
         )
@@ -129,7 +129,7 @@ class CovidStatsInstagramBot:
             r_value=today_r_value,
             guide_color=self.ACCENT_COLOR,
             relative_size=(0.475, 0.250),
-            relative_pos=(0.3, 0.775),
+            relative_pos=(0.3, 0.75),
             title=self._sm.r_graph_title(days=len(r_value_data)),
             title_color=self.SUBTITLES_COLOR,
             accent_color=self.ACCENT_COLOR,
