@@ -16,13 +16,13 @@ import matplotlib.font_manager as font_manager
 import pylab
 
 # My code
-from translator import StringManager
+from translator import StringManager, StringManagerDependent
 from grapher import GraphGenerator
 
 logger = logging.getLogger(__name__)
 
 
-class PosterText:
+class PosterText(StringManagerDependent):
     """
     Represents a collection of words, sencenses, or lines. Has a method called
     `to_image` that generates a special image of the words, where each of the
@@ -37,18 +37,13 @@ class PosterText:
     def __init__(
             self,
             *arguments: List,
-            string_manager=StringManager()
+            string_manager: StringManager = None,
     ):
-        self.set_string_manager(string_manager)
+        super().__init__(string_manager)
+
         self._lines = self.__arguments_to_lines(arguments)
         self._font_args = list()
         self._font_kwargs = list()
-
-    def set_string_manager(self, sm: StringManager) -> None:
-        if not isinstance(sm, StringManager):
-            raise TypeError(
-                "Argument must be an instance of the `StringManager` object.")
-        self._string_manager = sm
 
     def __arguments_to_lines(self, arguments: List):
         """ Recives a list of arguments.
@@ -191,7 +186,7 @@ class PosterText:
         return image
 
 
-class SingleDataPoster:
+class SingleDataPoster(StringManagerDependent):
 
     ASSETS_PATH = os.path.join("assets", "icons")
     NO_CHANGE_ICON = Image.open(os.path.join(ASSETS_PATH, "no-change.png"))
@@ -202,19 +197,13 @@ class SingleDataPoster:
                  title: str,
                  now: int,
                  prev: int,
-                 string_manager: StringManager = StringManager(),
+                 string_manager: StringManager = None,
                  ):
+        super().__init__(string_manager)
+
         self._title = title
         self._now = now
         self._prev = prev
-
-        self.set_string_manager(string_manager)
-
-    def set_string_manager(self, sm: StringManager) -> None:
-        if not isinstance(sm, StringManager):
-            raise TypeError(
-                "Argument must be an instance of the `StringManager` object.")
-        self._string_manager = sm
 
     @property
     def title(self,) -> str:
@@ -510,7 +499,7 @@ class SingleDataPoster:
         ]))
 
 
-class ImageGenerator:
+class ImageGenerator(StringManagerDependent):
 
     ASSETS_FOLDER = "assets"
     FONTS_FOLDER = os.path.join(ASSETS_FOLDER, "fonts")
@@ -564,16 +553,10 @@ class ImageGenerator:
 
     def __init__(self,
                  base_img: Image.Image,
-                 string_manager: StringManager = StringManager()
+                 string_manager: StringManager = None,
                  ):
+        super().__init__(string_manager)
         self._image = base_img
-        self.set_string_manager(string_manager)
-
-    def set_string_manager(self, sm: StringManager) -> None:
-        if not isinstance(sm, StringManager):
-            raise TypeError(
-                "Argument must be an instance of the `StringManager` object.")
-        self._string_manager = sm
 
     @property
     def image(self,):

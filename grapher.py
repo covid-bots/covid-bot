@@ -8,10 +8,10 @@ import os
 
 from typing import Tuple, List, Union, Optional
 
-from translator import StringManager
+from translator import StringManager, StringManagerDependent
 
 
-class GraphGenerator:
+class GraphGenerator(StringManagerDependent):
 
     GENERAL_LINES_CONFIG = {
         "linewidth": 5,
@@ -50,19 +50,13 @@ class GraphGenerator:
     MARK_TEXT_OFFEST = 0.125  # relative to the height of the figure
 
     def __init__(self,
-                 string_manager: StringManager = StringManager(),
+                 string_manager: StringManager = None,
                  ):
+        super().__init__(string_manager)
+
         self._data = list()
         self._guides = list()
         self._title = (None, None)
-
-        self.set_string_manager(string_manager)
-
-    def set_string_manager(self, sm: StringManager) -> None:
-        if not isinstance(sm, StringManager):
-            raise TypeError(
-                "Argument must be an instance of the `StringManager` object.")
-        self._string_manager = sm
 
     def add_data(self,
                  data: List[float],

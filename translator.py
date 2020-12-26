@@ -9,6 +9,7 @@ import datetime
 from typing import Union
 import os
 import json
+from abc import ABC
 
 
 class Country:
@@ -255,3 +256,28 @@ class StringManager:
             "COVID-19 status in {country} - {date} 🦠😷🏥",
             country=country,
         )
+
+
+class StringManagerDependent(ABC):
+
+    def __init__(self,
+                 string_manager: StringManager = None,
+                 ):
+        if string_manager is None:
+            string_manager = StringManager()
+
+        self.set_string_manager(string_manager)
+
+    def set_string_manager(self, sm: StringManager) -> None:
+        if not isinstance(sm, StringManager):
+            raise TypeError(
+                "Argument must be an instance of the `StringManager` object.")
+        self.__sm = sm
+
+    @property
+    def _string_manager(self) -> StringManager:
+        return self.__sm
+
+    @property
+    def _sm(self) -> StringManager:
+        return self.__sm
