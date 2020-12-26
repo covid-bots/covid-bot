@@ -158,11 +158,11 @@ class CovidStatsInstagramBot:
         bot.upload_photo(img_path, caption=caption,
                          options={"rename": False})
 
-    def genereate_and_upload(self,
-                             password: str,
-                             username: str = None,
-                             temp_image_name: str = "tempimg.jpg",
-                             ):
+    def generate_and_upload(self,
+                            password: str,
+                            username: str = None,
+                            temp_image_name: str = "tempimg.jpg",
+                            ):
         """ Generate a new image, and upload it to Instagram. """
 
         if username is None:
@@ -192,7 +192,7 @@ class CovidStatsInstagramBot:
         if Covid19API.get_changes().check_if_new(self._country.code):
             # If there is new data
             logger.info("New data found, generating and uploading image.")
-            self.genereate_and_upload(username=username, password=password)
+            self.generate_and_upload(username=username, password=password)
 
         else:
             # If there is no new data...
