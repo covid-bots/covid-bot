@@ -245,12 +245,6 @@ class DayDataDiff:
     def __generate_percentage_diff(newest_data, older_data):
         return (newest_data / older_data - 1) * 100
 
-    def confirmed_diff_str(self, min_len: int = 0):
-        diff = str(self.confirmed_diff)
-        zeros_to_add = max([min_len - len(diff), 0])
-        zeros = "0" * zeros_to_add
-        return zeros + diff
-
     @property
     def confirmed_diff(self):
         return self.__genrate_diff(self.__newest.confirmed_cases, self.__older.confirmed_cases)
@@ -325,7 +319,7 @@ class Covid19API:
 
         # Make a request to the api
         request_url = cls.__create_path_from_segments(
-            "total", "dayone", "country", country)
+            "total", "dayone", "country", country.lower())
         response_json = cls.__request(request_url)
 
         return multipleDaysData(response_json)
