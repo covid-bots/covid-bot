@@ -67,7 +67,7 @@ class Country:
 
 class StringManager:
 
-    __BASE_LANG_CODE = "en"
+    __BASE_LANG_CODE = "en_US"
 
     def __init__(self,):
         self.translator_delete()
@@ -107,7 +107,7 @@ class StringManager:
                           ) -> None:
         self.__check_valid_lang_code(dest_lang)
         self.__translator = Translator()
-        self.__dest_lang = dest_lang.lower()
+        self.__dest_lang = dest_lang
 
         if translations is None:
             translations = dict()
@@ -121,15 +121,21 @@ class StringManager:
         if not isinstance(country, Country):
             country = Country(country)
 
-        self.config_translator(country.lang_code, translations=translations)
+        self.config_translator(
+            f'{country.lang_code.lower()}_{country.code.upper()}',
+            translations=translations
+        )
 
     @staticmethod
     def __check_valid_lang_code(code: str):
         if not isinstance(code, str):
             raise TypeError("Language code must be a string.")
 
-        if len(code) != 2:
-            raise ValueError("Language code must be two characters long.")
+        if len(code) != 2 and len(code) != 5:
+            raise ValueError(
+                """Language code must be two (or five) characters long.
+                For example: 'en' or 'en_US'. """
+            )
 
     def translator_delete(self,):
         """ Delete the configuration of the translator. """
