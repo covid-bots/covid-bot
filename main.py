@@ -3,6 +3,7 @@ import os
 from instabot import Bot as Instabot
 from datetime import datetime
 import locale
+import json
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -31,12 +32,17 @@ class CovidStatsInstagramBot:
     SUBTITLES_COLOR = "#aaaaaa"
     ACCENT_COLOR = "#424242"
 
-    def __init__(self, country_code: str, username: str = None):
+    def __init__(self,
+                 country_code: str,
+                 username: str = None,
+                 string_manager: StringManager = None,
+                 ):
         self._country = Country(country_code)
 
-        sm = StringManager()
-        sm.config_country_translator(self._country)
-        self._sm = sm
+        if string_manager is None:
+            string_manager = StringManager()
+            string_manager.config_country_translator(self._country)
+        self._sm = string_manager
 
         self.__data = None
         self.__insta_username = username
@@ -179,34 +185,126 @@ class CovidStatsInstagramBot:
 
         os.remove(temp_image_name)
 
-    def upload_if_new_data(self,
-                           password: str,
-                           username: str = None,
-                           ):
-
-        if username is None:
-            username = self.instagram_username
-
-        logger.info("Checking for new information...")
-
-        if Covid19API.get_changes().check_if_new(self._country.code):
-            # If there is new data
-            logger.info("New data found, generating and uploading image.")
-            self.generate_and_upload(username=username, password=password)
-
-        else:
-            # If there is no new data...
-            logger.info("No new data found.")
-
     def get_caption(self,):
         country_code = self._country.code.upper()
         country_name = self._country.lang_locale.territories[country_code]
         return self._sm.caption(country=country_name)
 
 
-if __name__ == "__main__":
-    username = os.environ.get("COVID_INSTAGRAM_USERNAME")
-    password = os.environ.get("COVID_INSTAGRAM_PASSWORD")
+class ConfigFile:
 
-    bot = CovidStatsInstagramBot('il', username=username)
-    bot.upload_if_new_data(password=password)
+    def __init__(self, path_to_file: str):
+        with open(path_to_file, 'r', encoding='utf-8') as f:
+            self.__content = json.load(f)
+
+        self.__validate_content()
+        self.__iter = iter(self.__content)
+
+    def __validate_content(self,):
+        assert isinstance(
+            self.__content, dict), "Config file must be a json dictionary"
+
+    def __iter__(self,):
+        return self
+
+    def __next__(self,):
+        country_code = next(self.__iter)
+        country = Country(country_code)
+        data = self.__content[country_code]
+        return CountryConfig(country, data)
+
+
+class CountryConfig:
+
+    def __init__(self, country: Country, data: dict):
+        self.__country = country
+
+        self.__validate_data(data)
+        self.__data = data
+
+    def __validate_data(self, data: dict):
+        assert isinstance(data, dict), "Country data must be a dict"
+
+        if "instagram" in data:
+            instagram_data = data["instagram"]
+            assert isinstance(
+                instagram_data, dict), "Instagram data must be represented in a dictionary"
+
+            assert "username" in instagram_data, "Instagram data must include username and password"
+            assert "password" in instagram_data, "Instagram data must include username and password"
+
+            assert isinstance(
+                instagram_data["username"], str), "Instagram username must be a string"
+            assert isinstance(
+                instagram_data["password"], str), "Instagram password must be a string"
+
+        if "translations" in data:
+            translations_data = data["translations"]
+
+            assert isinstance(
+                translations_data, dict), "Translations must be represented in a dictionary"
+
+            for translation in translations_data:
+                assert isinstance(
+                    translations_data[translation], str), "Translation must be a string"
+
+    def to_string_manager(self,) -> StringManager:
+        """ Returns a new instance of the `StringManager` object, that matches
+        the settings from this country config file. """
+
+        sm = StringManager()
+        sm.config_country_translator(
+            country=self.country,
+            translations=self.translations
+        )
+        return sm
+
+    def to_bot(self,) -> CovidStatsInstagramBot:
+        return CovidStatsInstagramBot(
+            country_code=self.country.code,
+            username=self.instagram_login[0],
+            string_manager=self.to_string_manager(),
+        )
+
+    @property
+    def country(self,):
+        return self.__country
+
+    @property
+    def instagram_login(self,):
+        if "instagram" not in self.__data:
+            return None, None
+
+        instagram_data = self.__data["instagram"]
+        return instagram_data["username"], instagram_data["password"]
+
+    @property
+    def translations(self,):
+        if "translations" not in self.__data:
+            return dict()
+
+        return self.__data["translations"]
+
+
+def main():
+    logger.info("Checking for new information...")
+    changes = Covid19API.get_changes()
+
+    for country_config in ConfigFile('config.json'):
+        country_code = country_config.country.code
+
+        if changes.check_if_new(country_code):
+            logger.info(f"{country_config.country.name} - New data found")
+
+            username, password = country_config.instagram_login
+            country_config.to_bot().generate_and_upload(
+                username=username,
+                password=password
+            )
+
+            logger.info(
+                f"{country_config.country.name} - Uploaded image to @{username}")
+
+
+if __name__ == "__main__":
+    main()

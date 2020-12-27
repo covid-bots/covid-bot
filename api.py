@@ -339,7 +339,7 @@ class CountryDataChanges:
                  ):
         self._data_path = data_file
 
-        self._dates = {
+        self._data = {
             element["CountryCode"].lower(): {
                 key: element[key]
                 for key in element
@@ -348,12 +348,12 @@ class CountryDataChanges:
             for element in json_data
         }
 
-        self._saved_dates = self._load_data()
+        self._saved_data = self._load_data()
         self._save_data()
 
     def _save_data(self):
         with open(self._data_path, 'w') as f:
-            json.dump(self._dates, f, indent=4)
+            json.dump(self._data, f, indent=4)
 
     def _load_data(self):
         try:
@@ -370,14 +370,14 @@ class CountryDataChanges:
         if len(country_code) != 2:
             raise ValueError("Country code must be a two character string.")
 
-        if self._saved_dates is None:
+        if self._saved_data is None:
             # If there is no saved data
             return True
 
         country_code = country_code.lower()
 
-        if country_code not in self._saved_dates or country_code not in self._dates:
+        if country_code not in self._saved_data or country_code not in self._data:
             return True
 
         # returns `True` if the date in the old save is different from the current date.
-        return self._dates[country_code] != self._saved_dates[country_code]
+        return self._data[country_code] != self._saved_data[country_code]

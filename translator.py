@@ -8,7 +8,6 @@ import datetime
 
 from typing import Union
 import os
-import json
 from abc import ABC
 
 
@@ -69,8 +68,6 @@ class Country:
 class StringManager:
 
     __BASE_LANG_CODE = "en"
-    __LANG_FOLDER_PATH = "lang_config"
-    __LANG_TRANSLATION_FILENAME_FORMAT = "{code}_translation.json"
 
     def __init__(self,):
         self.translator_delete()
@@ -104,27 +101,27 @@ class StringManager:
 
         return string
 
-    def config_translator(self, dest_lang: str) -> None:
+    def config_translator(self,
+                          dest_lang: str,
+                          translations: dict = None,
+                          ) -> None:
         self.__check_valid_lang_code(dest_lang)
         self.__translator = Translator()
         self.__dest_lang = dest_lang.lower()
-        self.__translations = dict()
 
-        trans_filepath = os.path.join(
-            self.__LANG_FOLDER_PATH, self.__dest_lang,
-            self.__LANG_TRANSLATION_FILENAME_FORMAT.replace(
-                '{code}', self.__dest_lang)
-        )
+        if translations is None:
+            translations = dict()
 
-        if os.path.exists(trans_filepath):
-            with open(trans_filepath, encoding='utf-8') as f:
-                self.__translations = json.load(f)
+        self.__translations = translations
 
-    def config_country_translator(self, country: Union[Country, str]) -> None:
+    def config_country_translator(self,
+                                  country: Union[Country, str],
+                                  translations: dict = None,
+                                  ) -> None:
         if not isinstance(country, Country):
             country = Country(country)
 
-        self.config_translator(country.lang_code)
+        self.config_translator(country.lang_code, translations=translations)
 
     @staticmethod
     def __check_valid_lang_code(code: str):
