@@ -383,6 +383,8 @@ class SingleDataPoster(StringManagerDependent):
                    color="black",
                    ) -> Image.Image:
 
+        text = get_display(text)
+
         size = font.getsize(text)
         img = Image.new("RGBA", size, color=(255, 255, 255, 0))
 
