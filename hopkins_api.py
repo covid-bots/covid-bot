@@ -181,8 +181,8 @@ class Covid19API:
         response = requests.get(url=url.as_string())
 
         # Check if data loaded correctly
-        if response.status_code != 200:
-            raise requestAPIError(
+        if response.status_code == 200:
+            raise RequestAPIError(
                 f"{url}:\nResponse status {response.status_code}.")
 
         return response.content
@@ -408,3 +408,14 @@ class Covid19API:
             long=self._long_from_row(country_data),
             confirmed_each_day=self._confirmed_list_from_row(country_data),
         )
+
+
+# - - E X C E P T I O N S - - #
+
+class APIError(Exception):
+    """ Raised when there is some sort of error while using the API """
+
+
+class RequestAPIError(APIError):
+    """ Raised when trying to pull data from the online API,
+    but recives an error. """
