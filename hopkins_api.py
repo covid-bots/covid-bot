@@ -162,34 +162,41 @@ class Covid19API:
         """ When initialized, requests data from the API and saves it in memory. """
 
         # Makes a request to the url, downloads data
-        self.__content = self.__request(self.CONFIRMEND_BY_DATE_URL)
+        csv_content = self.__request(self.CONFIRMEND_BY_DATE_URL)
 
-        # convert downloaded content (in binary) to a 2d list with rows and
-        # columns not very efficient, saves the whole downloaded spreadsheet
-        # in memory until the object is deleted.... it is what it is (:
-        content = self.__content.decode('utf8').splitlines()
-        sheet_content = list(csv.reader(content))
-        self.__content_headers = sheet_content[0]
-        self.__content_2d = self.__merge_content(sheet_content[1:])
+        self.__headers = csv_content[0]
+        self.__content = self.__merge_content(csv_content[1:])
 
     # - - H E L P I N G - M E T H O D S - - #
 
-    @staticmethod
-    def __request(url: URL) -> list:
-        """ Make an http request, and check for errors. """
+    def __request(self,
+                  url: URL,
+                  ) -> typing.Tuple[typing.List[str],
+                                    typing.List[typing.List[str]]
+                                    ]:
+        """ Make an http request for an csv API.
+        Returns the data as a list of lists, where each element is a string.
+        """
 
         response = requests.get(url=url.as_string())
 
         # Check if data loaded correctly
-        if response.status_code == 200:
+        if response.status_code != 200:
             raise RequestAPIError(
                 f"{url}:\nResponse status {response.status_code}.")
 
-        return response.content
+        # convert downloaded content (in binary) to a 2d list with rows and
+        # columns not very efficient, saves the whole downloaded spreadsheet
+        # in memory until the object is deleted.... it is what it is (:
+
+        decoded_content = response.content.decode('utf8').splitlines()
+        sheet_content = list(csv.reader(decoded_content))
+
+        return sheet_content
 
     def __change_types_row(self,
                            row: typing.List[str]
-                           ) -> typing.List[typing.Union[str, int, float]]:
+                           ) -> typing.List[typing.Union[str, int, float, None]]:
         """ By default, data is provided in a list of strings. This methods
         recives one row of data, and for each element in the row, converts
         it into an integer or a float. """
@@ -321,10 +328,10 @@ class Covid19API:
         """ Recives a row from the database(that represents a country) and
         a field name. Returns the value of the given row in the given field. """
 
-        if field not in self.__content_headers:
+        if field not in self.__headers:
             raise ValueError("Invalid field")
 
-        index = self.__content_headers.index(field)
+        index = self.__headers.index(field)
         return row[index]
 
     def _country_from_row(self,
@@ -371,13 +378,7 @@ class Covid19API:
 
         with open(path, 'w+', newline='') as f:
             writer = csv.writer(f, delimiter=',')
-            writer.writerows([self.__content_headers] + self.__content_2d)
-
-    def save_raw_to_csv(self, path: str):
-        """ Saves the `confirmed_by_date` data into a spreadsheet in the given
-        file path. """
-        with open(path, 'wb') as f:
-            f.write(self.__content)
+            writer.writerows([self.__headers] + self.__content)
 
     def countries(self,) -> typing.Set[str]:
         """ All of the countries that are provided with the API.
@@ -385,7 +386,7 @@ class Covid19API:
 
         return {
             self._country_from_row(row)
-            for row in self.__content_2d
+            for row in self.__content
         }
 
     def get_country(self, country: str):
@@ -396,8 +397,7 @@ class Covid19API:
             raise ValueError("Invalid country")
 
         country_data = next(
-            row
-            for row in self.__content_2d
+            row for row in self.__content
             if self._country_from_row(row) == country
         )
 
