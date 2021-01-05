@@ -7,8 +7,8 @@ You can find more information about the API at https://github.com/CSSEGISandData
 import typing
 import logging
 import csv
-from purl import URL
 import requests
+from abc import ABC
 
 
 class CountryAPI:
@@ -153,34 +153,32 @@ class CountryAPI:
         return self.r_values_each_day[-1]
 
 
-class Covid19API:
+class APIFromCSV(ABC):
 
-    CONFIRMEND_BY_DATE_URL = URL(
-        r'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv'
-    )
+    CSV_URL = None
 
     def __init__(self):
-        """ When initialized, requests data from the API and saves it in memory. """
+        """ When initialized, requests data from the API, downloads the csv sheet
+        and saves it in memory. """
 
         # Download and save the confirmend cases history
-        confirmed_history_sheet = self.__request(self.CONFIRMEND_BY_DATE_URL)
-        self.__headers = confirmed_history_sheet[0]
-        self.__content = self.__merge_content(
-            confirmed_history_sheet[1:])
+        sheet = self.__request(self.CSV_URL)
 
-
-    # - - H E L P I N G - M E T H O D S - - #
+        # Saves the first row as the `headers` row, and the other rows
+        # as `content`.
+        self._headers = sheet[0]
+        self._content = sheet[1:]
 
     def __request(self,
-                  url: URL,
+                  url: str,
                   ) -> typing.Tuple[typing.List[str],
                                     typing.List[typing.List[str]]
                                     ]:
-        """ Make an http request for an csv API.
+        """ Tries to download the csv sheet from the provided URL.
         Returns the data as a list of lists, where each element is a string.
         """
 
-        response = requests.get(url=url.as_string())
+        response = requests.get(url=self.CSV_URL)
 
         # Check if data loaded correctly
         if response.status_code != 200:
@@ -195,6 +193,25 @@ class Covid19API:
         sheet_content = list(csv.reader(decoded_content))
 
         return sheet_content
+
+    def save_csv(self, path: str):
+        """ Saves the data into a spreadsheet in the given file path, after
+        the script analysed and modified it. """
+
+        with open(path, 'w+', newline='') as f:
+            writer = csv.writer(f, delimiter=',')
+            writer.writerows([self._headers] + self._content)
+
+
+class CovidConfirmedHistoryAPI(APIFromCSV):
+
+    CSV_URL = r'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv'
+
+    # - - H E L P I N G - M E T H O D S - - #
+
+    def __init__(self):
+        super().__init__()
+        self._content = self.__squash_content(self._content)
 
     def __change_types_row(self,
                            row: typing.List[str]
@@ -231,12 +248,12 @@ class Covid19API:
 
         return new_row
 
-    def __merge_content(self,
-                        content: typing.List[typing.List[str]],
-                        ) -> typing.List[typing.List[str]]:
+    def __squash_content(self,
+                         content: typing.List[typing.List[str]],
+                         ) -> typing.List[typing.List[str]]:
         """ Some countries separate their data into different states or provinces,
         like Canada, the UK, and Australia. This method recives the data as is,
-        and merges the seperated data. """
+        and squashes the seperated data. """
 
         new_content = list()
         visited_countries = set()
@@ -339,6 +356,35 @@ class Covid19API:
 
     # - - R O W - M A N I P U L A T I O N - #
 
+    def __row_by_country(self, name: str) -> typing.Optional[list]:
+        """ Returns the row with the data about the country from the saved
+        content. If the given country name is invalid, returns `None`. """
+
+        try:
+            return next(
+                row for row in self._content
+                if self._country_from_row(row) == name
+            )
+
+        except StopIteration:
+            # If not found, return `None`
+            return None
+
+    def __find_field_in_row(self,
+                            row: typing.List[typing.Union[
+                                str, int, float, None,
+                            ]],
+                            field: str,
+                            ) -> str:
+        """ Recives a row from the database(that represents a country) and
+        a field name. Returns the value of the given row in the given field. """
+
+        if field not in self._headers:
+            raise ValueError("Invalid field")
+
+        index = self._headers.index(field)
+        return row[index]
+
     def _confirmed_list_from_row(self,
                                  row: typing.List[typing.Union[
                                      str, int, float, None,
@@ -357,21 +403,6 @@ class Covid19API:
         NON_DATA_FIELDS = 4
         confirmed_list = row[NON_DATA_FIELDS:]
         return self.__modify_to_monotonically_increasing(confirmed_list)
-
-    def __find_field_in_row(self,
-                            row: typing.List[typing.Union[
-                                str, int, float, None,
-                            ]],
-                            field: str,
-                            ) -> str:
-        """ Recives a row from the database(that represents a country) and
-        a field name. Returns the value of the given row in the given field. """
-
-        if field not in self.__headers:
-            raise ValueError("Invalid field")
-
-        index = self.__headers.index(field)
-        return row[index]
 
     def _country_from_row(self,
                           row: typing.List[typing.Union[
@@ -411,21 +442,13 @@ class Covid19API:
 
     # - - P U B L I C - M E T H O D S - - #
 
-    def save_to_csv(self, path: str):
-        """ Saves the data into a spreadsheet in the given file path, after
-        the script analysed and modified it. """
-
-        with open(path, 'w+', newline='') as f:
-            writer = csv.writer(f, delimiter=',')
-            writer.writerows([self.__headers] + self.__content)
-
     def countries(self,) -> typing.Set[str]:
         """ All of the countries that are provided with the API.
         Returns a set of strings. """
 
         return {
             self._country_from_row(row)
-            for row in self.__content
+            for row in self._content
         }
 
     def get_country(self, country: str):
@@ -436,7 +459,7 @@ class Covid19API:
             raise ValueError("Invalid country")
 
         country_data = next(
-            row for row in self.__content
+            row for row in self._content
             if self._country_from_row(row) == country
         )
 
@@ -457,4 +480,4 @@ class APIError(Exception):
 
 class RequestAPIError(APIError):
     """ Raised when trying to pull data from the online API,
-    but recives an error. """
+    but recives an error (Error code != 200) """

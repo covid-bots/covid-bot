@@ -1,4 +1,4 @@
-from hopkins_api import Covid19API, CountryAPI
+from hopkins_api import CovidConfirmedHistoryAPI, CountryAPI
 import typing
 
 
@@ -8,11 +8,11 @@ class TestHopkinsAPI:
     __COUNTRIES = None
 
     @classmethod
-    def __get_api_instance(cls) -> Covid19API:
-        """ Returns an `Covid19API` instance. """
+    def __get_api_instance(cls) -> CovidConfirmedHistoryAPI:
+        """ Returns an `CovidConfirmedHistoryAPI` instance. """
 
         if cls.__API_INSTANCE is None:
-            cls.__API_INSTANCE = Covid19API()
+            cls.__API_INSTANCE = CovidConfirmedHistoryAPI()
 
         return cls.__API_INSTANCE
 
