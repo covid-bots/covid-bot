@@ -5,9 +5,10 @@ You can find more information about the API at https://github.com/CSSEGISandData
 """
 
 import typing
+import logging
+import csv
 from purl import URL
 import requests
-import csv
 
 
 class CountryAPI:
@@ -133,10 +134,10 @@ class CountryAPI:
             prev_week = weekly_averages[cur_index - 7]
 
             if cur_week == 0:
-                cur_r_value = 0
+                cur_r_value = 0.0
 
             elif prev_week == 0:
-                cur_r_value = 1
+                cur_r_value = 1.0
 
             else:
                 cur_r_value = (cur_week / prev_week) ** (4/7)
@@ -161,11 +162,12 @@ class Covid19API:
     def __init__(self):
         """ When initialized, requests data from the API and saves it in memory. """
 
-        # Makes a request to the url, downloads data
-        csv_content = self.__request(self.CONFIRMEND_BY_DATE_URL)
+        # Download and save the confirmend cases history
+        confirmed_history_sheet = self.__request(self.CONFIRMEND_BY_DATE_URL)
+        self.__headers = confirmed_history_sheet[0]
+        self.__content = self.__merge_content(
+            confirmed_history_sheet[1:])
 
-        self.__headers = csv_content[0]
-        self.__content = self.__merge_content(csv_content[1:])
 
     # - - H E L P I N G - M E T H O D S - - #
 
@@ -204,6 +206,11 @@ class Covid19API:
         new_row = list()
         for item in row:
 
+            # try converting to integer.
+            # if not possible, try converting to float
+            # if not possible, try converting to string
+            # if not possible (or empty string), set to `None`
+
             try:
                 item = int(item)
 
@@ -213,7 +220,12 @@ class Covid19API:
                     item = float(item)
 
                 except ValueError:
-                    pass
+
+                    if str(item):
+                        item = str(item)
+
+                    else:
+                        item = None
 
             new_row.append(item)
 
@@ -299,6 +311,32 @@ class Covid19API:
 
         return new_row
 
+    @staticmethod
+    def __modify_to_monotonically_increasing(
+        data: typing.List[typing.Union[int, float]],
+    ) -> typing.List[typing.Union[int, float]]:
+        """ Recives a list of numbers. Iterates over the list, and if
+        encounters a situation where a value is smaller than the value that
+        preceded it, sets its value to be equal to the previous value. This
+        process ensures that the resulting list is monotonically ascending.
+        """
+
+        modified_count = 0
+
+        for index in range(1, len(data)):
+            prev_index = index - 1
+
+            if data[prev_index] > data[index]:
+                data[index] = data[prev_index]
+                modified_count += 1
+
+        if modified_count > 0:
+            precentage_string = f"{round(modified_count/len(data)*100, 2)}%"
+            logging.warning(
+                f"API: Modified {modified_count} values out of {len(data)} in total ({precentage_string}%)")
+
+        return data
+
     # - - R O W - M A N I P U L A T I O N - #
 
     def _confirmed_list_from_row(self,
@@ -317,7 +355,8 @@ class Covid19API:
         # out!
 
         NON_DATA_FIELDS = 4
-        return row[NON_DATA_FIELDS:]
+        confirmed_list = row[NON_DATA_FIELDS:]
+        return self.__modify_to_monotonically_increasing(confirmed_list)
 
     def __find_field_in_row(self,
                             row: typing.List[typing.Union[
