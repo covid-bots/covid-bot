@@ -79,7 +79,7 @@ class TestHopkinsAPI:
     def test_country_province(self,):
 
         for country in self.__get_countries():
-            if country is not None:
+            if country.province is not None:
                 assert isinstance(country.province, str)
                 assert country.province, "Must be a non-empty string"
 
