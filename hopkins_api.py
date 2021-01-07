@@ -281,18 +281,31 @@ class DateHistoryCvsApi(ApiFromCsv):
         return [
             {
                 'id': row_data[id_index],
-                'data': [
-                    {
-                        'value': value,
-                        'date': date,
-                    }
-                    for index, (value, date) in enumerate(zip(row_data, dates))
-                    if index not in not_date_indexes
-                ]
+                'data': self.__generate_row_data(row_data,
+                                                 dates,
+                                                 not_date_indexes),
             }
 
             for row_data in self._content
         ]
+
+    def __generate_row_data(self,
+                            row_data: list,
+                            dates: list,
+                            not_date_indexes: list,
+                            ):
+
+        dates = iter(dates)
+        data = list()
+
+        for index, value in enumerate(row_data):
+            if index not in not_date_indexes:
+                data.append({
+                    'value': value,
+                    'date': next(dates),
+                })
+
+        return data
 
     def __squash_data_by_id(self, data):
 
