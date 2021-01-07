@@ -1,4 +1,3 @@
-from timebudget import timebudget
 """ In the past, this project was based on the API provided by https://covid19api.com.
 However, we found out that this API was unreliable, and provided not accurate data.
 This file contains the new API implementation, which is provided by the JHU CSSE.
@@ -9,6 +8,7 @@ import typing
 import csv
 import requests
 import datetime
+import logging
 
 
 class CountryAPI:
@@ -174,11 +174,12 @@ class ApiFromCsv:
         """ The source of the data - The API data url. """
         return self.__API_URL
 
-    @timebudget
     def __request(self,) -> typing.List[typing.List[str]]:
         """ Tries to download the csv sheet from the provided URL.
         Returns the data as a list of lists, where each element is a string.
         """
+
+        logging.info("Downloading data...")
 
         response = requests.get(self.API_URL)
         self.__raw_response_content = response.content
@@ -267,10 +268,12 @@ class DateHistoryCvsApi(ApiFromCsv):
                  id_index: int = 0,
                  ):
         super().__init__(url)
+
+        logging.info("Prossecing the downloaded information...")
+
         date_data = self.__generate_date_data(id_index)
         self.__date_data = self.__squash_data_by_id(date_data)
 
-    @timebudget
     def __generate_date_data(self, id_index: int,):
 
         dates, not_date_indexes = self.__generate_dates()
@@ -291,7 +294,6 @@ class DateHistoryCvsApi(ApiFromCsv):
             for row_data in self._content
         ]
 
-    @timebudget
     def __squash_data_by_id(self, data):
 
         visited_ids = set()
@@ -390,7 +392,7 @@ class DateHistoryCvsApi(ApiFromCsv):
         century = int(today.year / 100)
         year += century * 100
 
-        return datetime.date(day=day, month=month, year=year,)
+        return str(datetime.date(day=day, month=month, year=year,))
 
     def all_data(self,):
         return self.__date_data
@@ -427,6 +429,8 @@ COVID_RECOVERED_GLOBAL_HISTORY_ENDPOINT = r'https://raw.githubusercontent.com/CS
 class CovidDeathsHistory(DateHistoryCvsApi):
 
     def __init__(self,):
+        logging.info("Generating Covid 'deaths' history information...")
+
         super().__init__(
             url=COVID_DEATHS_GLOBAL_HISTORY_ENDPOINT,
             id_index=1,
@@ -436,6 +440,8 @@ class CovidDeathsHistory(DateHistoryCvsApi):
 class CovidConfirmedHistory(DateHistoryCvsApi):
 
     def __init__(self,):
+        logging.info("Generating Covid 'confirmed' history information...")
+
         super().__init__(
             url=COVID_CONFIRMED_GLOBAL_HISTORY_ENDPOINT,
             id_index=1,
@@ -445,10 +451,56 @@ class CovidConfirmedHistory(DateHistoryCvsApi):
 class CovidRecoveredHistory(DateHistoryCvsApi):
 
     def __init__(self,):
+        logging.info("Generating Covid 'recovered' history information...")
+
         super().__init__(
             url=COVID_RECOVERED_GLOBAL_HISTORY_ENDPOINT,
             id_index=1,
         )
+
+
+class CovidHistoryDatabase:
+
+    def __init__(self,):
+
+        self.__data = self.__combine_data({
+            "confirmed": CovidConfirmedHistory().all_data(),
+            "deaths": CovidDeathsHistory().all_data(),
+            "recovered": CovidRecoveredHistory().all_data(),
+        })
+
+    def all_data(self,):
+        return self.__data
+
+    def country_data(self, country: str):
+        return next(
+            data['data']
+            for data in self.all_data()
+            if data['country'] == country
+        )
+
+    def __combine_data(self, data: dict):
+
+        types = list(data.keys())
+        countries = list()
+
+        for datasets in zip(*data.values()):
+
+            country_dates = list()
+            for date_sets in zip(*(dataset['data'] for dataset in datasets)):
+
+                cur_data = {'date': date_sets[0]['date']}
+                for date_data, cur_type in zip(date_sets, types):
+                    cur_data[cur_type] = date_data['value']
+
+                country_dates.append(cur_data)
+
+            countries.append({
+                'country': datasets[0]['id'],
+                'data': country_dates,
+            })
+
+        return countries
 
 
 # - - E X C E P T I O N S - - #
