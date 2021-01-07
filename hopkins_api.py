@@ -1,3 +1,4 @@
+from timebudget import timebudget
 """ In the past, this project was based on the API provided by https://covid19api.com.
 However, we found out that this API was unreliable, and provided not accurate data.
 This file contains the new API implementation, which is provided by the JHU CSSE.
@@ -5,10 +6,9 @@ You can find more information about the API at https://github.com/CSSEGISandData
 """
 
 import typing
-import logging
 import csv
 import requests
-from abc import ABC
+import datetime
 
 
 class CountryAPI:
@@ -153,37 +153,40 @@ class CountryAPI:
         return self.r_values_each_day[-1]
 
 
-class APIFromCSV(ABC):
+class ApiFromCsv:
 
-    CSV_URL = None
-
-    def __init__(self):
+    def __init__(self, url: str):
         """ When initialized, requests data from the API, downloads the csv sheet
         and saves it in memory. """
 
+        self.__API_URL = url
+
         # Download and save the confirmend cases history
-        sheet = self.__request(self.CSV_URL)
+        sheet = self.__request()
 
         # Saves the first row as the `headers` row, and the other rows
         # as `content`.
         self._headers = sheet[0]
-        self._content = sheet[1:]
+        self._content = self.__change_types(sheet[1:])
 
-    def __request(self,
-                  url: str,
-                  ) -> typing.Tuple[typing.List[str],
-                                    typing.List[typing.List[str]]
-                                    ]:
+    @property
+    def API_URL(self,):
+        """ The source of the data - The API data url. """
+        return self.__API_URL
+
+    @timebudget
+    def __request(self,) -> typing.List[typing.List[str]]:
         """ Tries to download the csv sheet from the provided URL.
         Returns the data as a list of lists, where each element is a string.
         """
 
-        response = requests.get(url=self.CSV_URL)
+        response = requests.get(self.API_URL)
+        self.__raw_response_content = response.content
 
         # Check if data loaded correctly
         if response.status_code != 200:
             raise RequestAPIError(
-                f"{url}:\nResponse status {response.status_code}.")
+                f"{self.API_UR}:\nResponse status {response.status_code}.")
 
         # convert downloaded content (in binary) to a 2d list with rows and
         # columns not very efficient, saves the whole downloaded spreadsheet
@@ -194,281 +197,257 @@ class APIFromCSV(ABC):
 
         return sheet_content
 
-    def save_csv(self, path: str):
-        """ Saves the data into a spreadsheet in the given file path, after
-        the script analysed and modified it. """
-
-        with open(path, 'w+', newline='') as f:
-            writer = csv.writer(f, delimiter=',')
-            writer.writerows([self._headers] + self._content)
-
-
-class CovidConfirmedHistoryAPI(APIFromCSV):
-
-    CSV_URL = r'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv'
-
-    # - - H E L P I N G - M E T H O D S - - #
-
-    def __init__(self):
-        super().__init__()
-        self._content = self.__squash_content(self._content)
-
-    def __change_types_row(self,
-                           row: typing.List[str]
-                           ) -> typing.List[typing.Union[str, int, float, None]]:
+    def __change_types(self,
+                       content: typing.List[typing.List[str]]
+                       ) -> typing.List[typing.Union[str, int, float, None]]:
         """ By default, data is provided in a list of strings. This methods
         recives one row of data, and for each element in the row, converts
         it into an integer or a float. """
 
-        new_row = list()
-        for item in row:
+        return [
+            [
+                self.__change_item_type(item)
+                for item in row
+            ]
+            for row in content
+        ]
 
-            # try converting to integer.
-            # if not possible, try converting to float
-            # if not possible, try converting to string
-            # if not possible (or empty string), set to `None`
+    def __change_item_type(self, item: str) -> typing.Any:
+        """ Convert the given string into an integer, float, leaves it a string,
+        or even to `None` if the string is empty. """
+
+        # try converting to integer.
+        # if not possible, try converting to float
+        # if not possible, try converting to string
+        # if not possible (or empty string), set to `None`
+
+        try:
+            return int(item)
+
+        except ValueError:
 
             try:
-                item = int(item)
+                return float(item)
 
             except ValueError:
 
-                try:
-                    item = float(item)
-
-                except ValueError:
-
-                    if str(item):
-                        item = str(item)
-
-                    else:
-                        item = None
-
-            new_row.append(item)
-
-        return new_row
-
-    def __squash_content(self,
-                         content: typing.List[typing.List[str]],
-                         ) -> typing.List[typing.List[str]]:
-        """ Some countries separate their data into different states or provinces,
-        like Canada, the UK, and Australia. This method recives the data as is,
-        and squashes the seperated data. """
-
-        new_content = list()
-        visited_countries = set()
-
-        for data_row in content:
-
-            data_row = self.__change_types_row(data_row)
-            country = self._country_from_row(data_row)
-
-            if country in visited_countries:
-
-                # find the index of the already saved data
-                matching_index = next(
-                    index
-                    for index, row in enumerate(new_content)
-                    if self._country_from_row(row) == country
-                )
-
-                # pop the already saved data from the database
-                data_visited = new_content.pop(matching_index)
-
-                # merge the rows
-                data_row = self.__merge_rows(
-                    data_row, data_visited,
-                )
-
-            # add the data to the new database,
-            # save the current country as 'visited'
-            new_content.append(data_row)
-            visited_countries.add(country)
-
-        return new_content
-
-    def __merge_rows(self,
-                     row_one: typing.List[str],
-                     row_two: typing.List[str]
-                     ) -> typing.List[str]:
-        """ Recives two data rows from the database, and returns a single row
-        that combines the data from both rows. Used in the `merge_content`
-        method. """
-
-        new_row = list()
-
-        # iterate over rows
-        for cur_one, cur_two in zip(row_one, row_two):
-
-            if type(cur_one) != type(cur_two):
-                cur_new = None
-
-            else:
-
-                if isinstance(cur_two, int):
-                    cur_new = cur_one + cur_two
-
-                elif isinstance(cur_two, float):
-                    # not the 'real' average if used more then once on the
-                    # same line, but it's better then nothing. This is used
-                    # for the 'Lat' and 'Long' fields, but our script doesn't
-                    # relay on those fields so I don't really care if it's
-                    # not that accurate. (:
-                    cur_new = (cur_one + cur_two) / 2
+                if str(item):
+                    return str(item)
 
                 else:
+                    return None
 
-                    if cur_one == cur_two:
-                        cur_new = cur_one
+    def _content_to_list_of_dicts(self,
+                                  content: typing.List[typing.List[typing.Any]],
+                                  headers: typing.List[str],
+                                  ) -> typing.List[typing.Dict[str, typing.Any]]:
+        """ Converts the 2d list database content into a list of dictionaries.
+        Each new dictionary in the list represent one row of content. """
 
-                    else:
-                        cur_new = None
+        return [
+            {
+                header: data
+                for header, data in zip(headers, row)
+            }
+            for row in content
+        ]
 
-            new_row.append(cur_new)
+    def save_csv(self, path: str):
+        """ Saves the data into a spreadsheet in the given file path, as downloaded
+        from the API (not including the modifications of the script). """
 
-        return new_row
+        with open(path, 'wb') as f:
+            f.write(self.__raw_response_content)
 
-    @staticmethod
-    def __modify_to_monotonically_increasing(
-        data: typing.List[typing.Union[int, float]],
-    ) -> typing.List[typing.Union[int, float]]:
-        """ Recives a list of numbers. Iterates over the list, and if
-        encounters a situation where a value is smaller than the value that
-        preceded it, sets its value to be equal to the previous value. This
-        process ensures that the resulting list is monotonically ascending.
-        """
 
-        modified_count = 0
+class DateHistoryCvsApi(ApiFromCsv):
 
-        for index in range(1, len(data)):
-            prev_index = index - 1
+    def __init__(self,
+                 url: str,
+                 id_index: int = 0,
+                 ):
+        super().__init__(url)
+        date_data = self.__generate_date_data(id_index)
+        self.__date_data = self.__squash_data_by_id(date_data)
 
-            if data[prev_index] > data[index]:
-                data[index] = data[prev_index]
-                modified_count += 1
+    @timebudget
+    def __generate_date_data(self, id_index: int,):
 
-        if modified_count > 0:
-            precentage_string = f"{round(modified_count/len(data)*100, 2)}%"
-            logging.warning(
-                f"API: Modified {modified_count} values out of {len(data)} in total ({precentage_string}%)")
+        dates, not_date_indexes = self.__generate_dates()
 
-        return data
+        return [
+            {
+                'id': row_data[id_index],
+                'data': [
+                    {
+                        'value': value,
+                        'date': date,
+                    }
+                    for index, (value, date) in enumerate(zip(row_data, dates))
+                    if index not in not_date_indexes
+                ]
+            }
 
-    # - - R O W - M A N I P U L A T I O N - #
+            for row_data in self._content
+        ]
 
-    def __row_by_country(self, name: str) -> typing.Optional[list]:
-        """ Returns the row with the data about the country from the saved
-        content. If the given country name is invalid, returns `None`. """
+    @timebudget
+    def __squash_data_by_id(self, data):
 
-        try:
-            return next(
-                row for row in self._content
-                if self._country_from_row(row) == name
-            )
+        visited_ids = set()
+        new_data = list()
 
-        except StopIteration:
-            # If not found, return `None`
-            return None
+        for cur_index, cur_data in enumerate(data):
+            if cur_data['id'] in visited_ids:
 
-    def __find_field_in_row(self,
-                            row: typing.List[typing.Union[
-                                str, int, float, None,
-                            ]],
-                            field: str,
-                            ) -> str:
-        """ Recives a row from the database(that represents a country) and
-        a field name. Returns the value of the given row in the given field. """
+                already_visited_index = next(
+                    new_data.index(cur_visited)
+                    for cur_visited in new_data
+                    if cur_visited['id'] == cur_data['id']
+                )
 
-        if field not in self._headers:
-            raise ValueError("Invalid field")
+                cur_data['data'] = self.__merge_same_ids(
+                    cur_data,
+                    data[already_visited_index],
+                )
 
-        index = self._headers.index(field)
-        return row[index]
+                new_data.pop(already_visited_index)
 
-    def _confirmed_list_from_row(self,
-                                 row: typing.List[typing.Union[
-                                     str, int, float, None,
-                                 ]],
-                                 ) -> typing.List[int]:
-        """ Recives a row from the database(that represents a country) and
-        returns a list that represents the confirmed cases each day in the
-        country, where the first number is the confirmed cases in the 22nd
-        of January 2020, and the last element is the confirmend cases today.
-        """
+            else:
+                visited_ids.add(cur_data['id'])
 
-        # The non data fields (country name, state, etc.) always appear in the
-        # 'left' (first elements in the list), so its very easy to cut them
-        # out!
+            new_data.append(cur_data)
 
-        NON_DATA_FIELDS = 4
-        confirmed_list = row[NON_DATA_FIELDS:]
-        return self.__modify_to_monotonically_increasing(confirmed_list)
+        return new_data
 
-    def _country_from_row(self,
-                          row: typing.List[typing.Union[
-                              str, int, float, None,
-                          ]],
-                          ) -> str:
-        """ Recives a row from the database(that represents a country),
-        and returns the 'Country' field. """
-        return self.__find_field_in_row(row, 'Country/Region')
+    def __merge_same_ids(self, data_one, data_two,):
 
-    def _province_from_row(self,
-                           row: typing.List[typing.Union[
-                               str, int, float, None,
-                           ]],
-                           ) -> typing.Optional[str]:
-        """ Recives a row from the database(that represents a country),
-        and returns the 'Province/State' field. """
-        return self.__find_field_in_row(row, 'Province/State')
+        one_dates = [cur['date'] for cur in data_one['data']]
+        two_dates = [cur['date'] for cur in data_two['data']]
 
-    def _lat_from_row(self,
-                      row: typing.List[typing.Union[
-                          str, int, float, None,
-                      ]],
-                      ) -> typing.Optional[float]:
-        """ Recives a row from the database(that represents a country),
-        and returns the 'Lat' field. """
-        return self.__find_field_in_row(row, 'Lat')
+        # union date lists, maintain order
+        dates = list(dict.fromkeys(one_dates + two_dates))
 
-    def _long_from_row(self,
-                       row: typing.List[typing.Union[
-                           str, int, float, None,
-                       ]],
-                       ) -> typing.Optional[float]:
-        """ Recives a row from the database(that represents a country),
-        and returns the 'Long' field. """
-        return self.__find_field_in_row(row, 'Long')
+        new_data = list()
 
-    # - - P U B L I C - M E T H O D S - - #
+        for date in dates:
 
-    def countries(self,) -> typing.Set[str]:
-        """ All of the countries that are provided with the API.
-        Returns a set of strings. """
+            value = 0
 
-        return {
-            self._country_from_row(row)
-            for row in self._content
-        }
+            try:
+                value += next(
+                    cur_data['value']
+                    for cur_data in data_one['data']
+                    if cur_data['date'] == date
+                )
 
-    def get_country(self, country: str):
-        """ Returns an `CovidCountryAPI` with data that represents the provided
-        country only. """
+            except StopIteration:
+                pass
 
-        if country not in self.countries():
-            raise ValueError("Invalid country")
+            try:
+                value += next(
+                    cur_data['value']
+                    for cur_data in data_two['data']
+                    if cur_data['date'] == date
+                )
 
-        country_data = next(
-            row for row in self._content
-            if self._country_from_row(row) == country
+            except StopIteration:
+                pass
+
+            new_data.append({
+                'date': date,
+                'value': value,
+            })
+
+        return new_data
+
+    def __generate_dates(self,):
+
+        not_date_indexes = set()
+        dates = list()
+
+        for index, header in enumerate(self._headers):
+            try:
+                date = self.__string_to_date(header)
+                dates.append(date)
+
+            except Exception:
+                not_date_indexes.add(index)
+
+        return dates, not_date_indexes
+
+    def __string_to_date(self, date_string: str) -> datetime.date:
+        """ Converts the date string recvied by the API into a `datetime.date`
+        instance, and returns it. """
+
+        month, day, year = date_string.split('/')
+        month, day, year = (int(value) for value in (month, day, year))
+
+        # API provides years with only 2 less significant digits.
+        # For example, if the year is `2021`, the api will return only `21`.
+        # This adds the `2000` part (:
+        today = datetime.date.today()
+        century = int(today.year / 100)
+        year += century * 100
+
+        return datetime.date(day=day, month=month, year=year,)
+
+    def all_data(self,):
+        return self.__date_data
+
+    def data_by_id(self, data_id: str):
+        return next(
+            data['data']
+            for data in self.all_data()
+            if data['id'] == data_id
         )
 
-        return CountryAPI(
-            name=self._country_from_row(country_data),
-            province=self._province_from_row(country_data),
-            lat=self._lat_from_row(country_data),
-            long=self._long_from_row(country_data),
-            confirmed_each_day=self._confirmed_list_from_row(country_data),
+    def data_by_date(self, date: datetime.date):
+
+        data_list = list()
+
+        for id_data in self.all_data():
+            for date_data in id_data['data']:
+                if date_data['date'] == date:
+                    data_list.append({
+                        'id': id_data['id'],
+                        'value': date_data['value'],
+                    })
+
+        return data_list
+
+
+# Source: JHU CSSE COVID-19 Data
+# https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series
+COVID_DEATHS_GLOBAL_HISTORY_ENDPOINT = r'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv'
+COVID_CONFIRMED_GLOBAL_HISTORY_ENDPOINT = r'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv'
+COVID_RECOVERED_GLOBAL_HISTORY_ENDPOINT = r'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv'
+
+
+class CovidDeathsHistory(DateHistoryCvsApi):
+
+    def __init__(self,):
+        super().__init__(
+            url=COVID_DEATHS_GLOBAL_HISTORY_ENDPOINT,
+            id_index=1,
+        )
+
+
+class CovidConfirmedHistory(DateHistoryCvsApi):
+
+    def __init__(self,):
+        super().__init__(
+            url=COVID_CONFIRMED_GLOBAL_HISTORY_ENDPOINT,
+            id_index=1,
+        )
+
+
+class CovidRecoveredHistory(DateHistoryCvsApi):
+
+    def __init__(self,):
+        super().__init__(
+            url=COVID_RECOVERED_GLOBAL_HISTORY_ENDPOINT,
+            id_index=1,
         )
 
 
