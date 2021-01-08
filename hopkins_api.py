@@ -11,20 +11,19 @@ import datetime
 import logging
 
 
-class CountryAPI:
+class CountryData:
 
     def __init__(self,
                  name: str,
-                 province: typing.Optional[str],
-                 lat: typing.Optional[float],
-                 long: typing.Optional[float],
-                 confirmed_each_day: typing.List[int],
+                 data: typing.List[dict],
                  ):
         self.__name = name
-        self.__province = province
-        self.__lat = lat
-        self.__long = long
-        self.__confirmed_each_day = confirmed_each_day
+        self.__data = data
+
+    @property
+    def data(self,) -> typing.List[dict]:
+        """ Returns the raw data that is saved in the instance. """
+        return self.__data
 
     @property
     def name(self,) -> str:
@@ -32,36 +31,31 @@ class CountryAPI:
         return self.__name
 
     @property
-    def province(self,) -> typing.Optional[str]:
-        """ The province or state, as a string.
-        In some cases, will return `None`. """
-        return self.__province
-
-    @property
-    def lat(self,) -> typing.Optional[float]:
-        """ The latitude of the country, as a float.
-        In some cases, will return `None`.
-        NOTE: this can be inaccurate in a country with multiple states
-        or provinces. For more information, check the `__merge_rows` method
-        in the `Covid19API` object. """
-        return self.__lat
-
-    @property
-    def long(self,) -> typing.Optional[float]:
-        """ The longitude  of the country, as a float.
-        In some cases, will return `None`.
-        NOTE: this can be inaccurate in a country with multiple states
-        or provinces. For more information, check the `__merge_rows` method
-        in the `Covid19API` object. """
-        return self.__long
-
-    @property
     def confirmed_each_day(self,) -> typing.List[int]:
         """ A list of integers, where each cell represents the total confirmed
         cases discovered up to the date that the cell represents. The first
         cell represents the 22nd of January 2020, and the last cell represent
         the newest data (today / yesterday). """
-        return self.__confirmed_each_day
+
+        return [data['confirmed'] for data in self.data]
+
+    @property
+    def deaths_each_day(self,) -> typing.List[int]:
+        """ A list of integers, where each cell represents the total death
+        cases discovered up to the date that the cell represents. The first
+        cell represents the 22nd of January 2020, and the last cell represent
+        the newest data (today / yesterday). """
+
+        return [data['deaths'] for data in self.data]
+
+    @property
+    def recovered_each_day(self,) -> typing.List[int]:
+        """ A list of integers, where each cell represents the total recovered
+        cases discovered up to the date that the cell represents. The first
+        cell represents the 22nd of January 2020, and the last cell represent
+        the newest data (today / yesterday). """
+
+        return [data['recovered'] for data in self.data]
 
     @property
     def total_confirmed_cases(self,) -> int:
@@ -141,6 +135,9 @@ class CountryAPI:
 
             else:
                 cur_r_value = (cur_week / prev_week) ** (4/7)
+
+                if isinstance(cur_r_value, complex):
+                    cur_r_value = 0.0
 
             r_list.append(cur_r_value)
 
@@ -405,7 +402,7 @@ class DateHistoryCvsApi(ApiFromCsv):
         century = int(today.year / 100)
         year += century * 100
 
-        return atetime.date(day=day, month=month, year=year,)
+        return datetime.date(day=day, month=month, year=year,)
 
     def all_data(self,):
         return self.__date_data
@@ -505,6 +502,12 @@ class CovidHistoryDatabase:
 
         return countries
 
+    def countries(self,) -> typing.List[str]:
+        """ Returns a list that has all of the names of the countries that are
+        provided by the API. """
+
+        return [data['country'] for data in self.all_data()]
+
     def all_data(self,):
         return self.__data
 
@@ -515,7 +518,13 @@ class CovidHistoryDatabase:
             if data['country'] == country
         )
 
-    def data_by_date(self, date: datetime.date):
+    def country(self, country: str):
+        return CountryData(
+            name=country,
+            data=self.country_data(country),
+        )
+
+    def date_data(self, date: datetime.date):
 
         data_list = list()
 
