@@ -7,6 +7,8 @@ class TestHopkinsAPI:
     __API_INSTANCE = None
     __COUNTRIES = None
 
+    # - - Helpers - - #
+
     @classmethod
     def __get_api_instance(cls) -> CovidHistoryDatabase:
         """ Returns an `CovidHistoryDatabase` instance. """
@@ -29,21 +31,26 @@ class TestHopkinsAPI:
 
         return cls.__COUNTRIES
 
-    def __assert_monotonic(self, list_of_nums: list, up: bool = True):
-        """ Returns `False` only if the list is not ordered from lowest to
-        highest, or from highest to lowest if `up` is set to `False`. """
+    def __test_country_each_day_data(self, property_func: typing.Callable):
 
-        if len(list_of_nums) < 2:
-            return True
+        for country in self.__get_countries():
 
-        for index in range(1, len(list_of_nums)):
-            cur = list_of_nums[index]
-            prev = list_of_nums[index - 1]
+            history_list = property_func(country)
+            assert isinstance(history_list, list)
 
-            if not (cur == prev or (up == (cur > prev))):
-                return False
+            assert len(history_list) > 100
+            # list should be much longer then 100...
 
-        return True
+            for item in history_list:
+                assert isinstance(item, int)
+
+    def __test_country_property_int(self, property_func: typing.Callable):
+
+        for country in self.__get_countries():
+            value = property_func(country)
+            assert isinstance(value, int), "This property must be an integer"
+
+    # - - General - - #
 
     def test_countries(self,):
         api = self.__get_api_instance()
@@ -76,43 +83,58 @@ class TestHopkinsAPI:
             assert country.name in api.countries()
             assert country.name, "Must be a non-empty string"
 
-    def __test_country_each_day_data(self, property: typing.Callable):
-
-        for country in self.__get_countries():
-
-            history_list = country.confirmed_each_day
-            assert isinstance(history_list, list)
-
-            assert len(history_list) > 100
-            # list should be much longer then 100...
-
-            for item in history_list:
-                assert isinstance(item, int)
+    # - - Confirmed - - #
 
     def test_country_confirmed_each_day(self,):
         self.__test_country_each_day_data(
             lambda country: country.confirmed_each_day
         )
 
+    def test_country_confirmed(self,):
+        self.__test_country_property_int(
+            lambda country: country.confirmed
+        )
+
+    # - - Deaths - - #
+
     def test_country_deaths_each_day(self,):
         self.__test_country_each_day_data(
             lambda country: country.deaths_each_day
         )
+
+    def test_country_deaths(self,):
+        self.__test_country_property_int(
+            lambda country: country.deaths
+        )
+
+    def test_country_deaths_today(self,):
+        self.__test_country_property_int(
+            lambda country: country.deaths_today
+        )
+
+    # - - Recovered - - #
 
     def test_country_recovered_each_day(self,):
         self.__test_country_each_day_data(
             lambda country: country.recovered_each_day
         )
 
-    def test_country_total_confirmed_cases(self,):
+    def test_country_recovered(self,):
+        self.__test_country_property_int(
+            lambda country: country.recovered
+        )
 
-        for country in self.__get_countries():
-            assert isinstance(country.total_confirmed_cases, int)
+    def test_country_recovered_today(self,):
+        self.__test_country_property_int(
+            lambda country: country.recovered_today
+        )
+
+    # - - New cases (confirmed diff) - - #
 
     def test_country_new_cases(self,):
-
-        for country in self.__get_countries():
-            assert isinstance(country.new_cases, int)
+        self.__test_country_property_int(
+            lambda country: country.new_cases
+        )
 
     def test_country_new_cases_each_day(self,):
 
@@ -135,6 +157,8 @@ class TestHopkinsAPI:
 
             for item in weekly_averages_list:
                 assert isinstance(item, float)
+
+    # - - R values - - #
 
     def test_country_r_values_each_day(self,):
 

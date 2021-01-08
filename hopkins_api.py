@@ -40,6 +40,10 @@ class CountryData:
         return [data['confirmed'] for data in self.data]
 
     @property
+    def confirmed(self,) -> int:
+        return self.confirmed_each_day[-1]
+
+    @property
     def deaths_each_day(self,) -> typing.List[int]:
         """ A list of integers, where each cell represents the total death
         cases discovered up to the date that the cell represents. The first
@@ -47,6 +51,14 @@ class CountryData:
         the newest data (today / yesterday). """
 
         return [data['deaths'] for data in self.data]
+
+    @property
+    def deaths(self, ) -> int:
+        return self.deaths_each_day[-1]
+
+    @property
+    def deaths_today(self,) -> int:
+        return self.deaths_each_day[-1] - self.deaths_each_day[-2]
 
     @property
     def recovered_each_day(self,) -> typing.List[int]:
@@ -58,14 +70,12 @@ class CountryData:
         return [data['recovered'] for data in self.data]
 
     @property
-    def total_confirmed_cases(self,) -> int:
-        """ The total number of Covid cases discovered in the country. """
-        return self.confirmed_each_day[-1]
+    def recovered(self,) -> int:
+        return self.recovered_each_day[-1]
 
     @property
-    def new_cases(self,) -> int:
-        """ The number of cases that were discovered in the last day. """
-        return self.confirmed_each_day[-1] - self.confirmed_each_day[-2]
+    def recovered_today(self,) -> int:
+        return self.recovered_each_day[-1] - self.recovered_each_day[-2]
 
     @property
     def new_cases_each_day(self,) -> typing.List[int]:
@@ -81,6 +91,11 @@ class CountryData:
             new.append(total[index] - total[index-1])
 
         return new
+
+    @property
+    def new_cases(self,) -> int:
+        """ The number of cases that were discovered in the last day. """
+        return self.confirmed_each_day[-1] - self.confirmed_each_day[-2]
 
     def __new_cases_x_days_averages(self, days: int) -> typing.List[float]:
         """ Same as `new_cases_each_day`, but instead of representing each
