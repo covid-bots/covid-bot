@@ -405,7 +405,7 @@ class DateHistoryCvsApi(ApiFromCsv):
         century = int(today.year / 100)
         year += century * 100
 
-        return str(datetime.date(day=day, month=month, year=year,))
+        return atetime.date(day=day, month=month, year=year,)
 
     def all_data(self,):
         return self.__date_data
@@ -482,16 +482,6 @@ class CovidHistoryDatabase:
             "recovered": CovidRecoveredHistory().all_data(),
         })
 
-    def all_data(self,):
-        return self.__data
-
-    def country_data(self, country: str):
-        return next(
-            data['data']
-            for data in self.all_data()
-            if data['country'] == country
-        )
-
     def __combine_data(self, data: dict):
 
         types = list(data.keys())
@@ -514,6 +504,30 @@ class CovidHistoryDatabase:
             })
 
         return countries
+
+    def all_data(self,):
+        return self.__data
+
+    def country_data(self, country: str):
+        return next(
+            data['data']
+            for data in self.all_data()
+            if data['country'] == country
+        )
+
+    def data_by_date(self, date: datetime.date):
+
+        data_list = list()
+
+        for country_data in self.all_data():
+            for date_data in country_data['data']:
+                if date_data['date'] == date:
+
+                    del date_data['date']
+                    date_data['country'] = country_data['country']
+                    data_list.append(date_data)
+
+        return data_list
 
 
 # - - E X C E P T I O N S - - #
