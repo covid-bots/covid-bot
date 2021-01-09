@@ -95,6 +95,11 @@ class TestHopkinsAPI:
             lambda country: country.confirmed
         )
 
+    def test_country_confirmed_yesterday(self,):
+        self.__test_country_property_int(
+            lambda country: country.confirmed_yesterday
+        )
+
     # - - Deaths - - #
 
     def test_country_deaths_each_day(self,):
@@ -107,9 +112,14 @@ class TestHopkinsAPI:
             lambda country: country.deaths
         )
 
-    def test_country_deaths_today(self,):
+    def test_country_deaths_yesterday(self,):
         self.__test_country_property_int(
-            lambda country: country.deaths_today
+            lambda country: country.deaths_yesterday
+        )
+
+    def test_country_deaths_diff_today(self,):
+        self.__test_country_property_int(
+            lambda country: country.deaths_diff_today
         )
 
     # - - Recovered - - #
@@ -124,17 +134,17 @@ class TestHopkinsAPI:
             lambda country: country.recovered
         )
 
-    def test_country_recovered_today(self,):
+    def test_country_recovered_yesterday(self,):
         self.__test_country_property_int(
-            lambda country: country.recovered_today
+            lambda country: country.recovered_yesterday
+        )
+
+    def test_country_recovered_diff_today(self,):
+        self.__test_country_property_int(
+            lambda country: country.recovered_diff_today
         )
 
     # - - New cases (confirmed diff) - - #
-
-    def test_country_new_cases(self,):
-        self.__test_country_property_int(
-            lambda country: country.new_cases
-        )
 
     def test_country_new_cases_each_day(self,):
 
@@ -146,6 +156,16 @@ class TestHopkinsAPI:
 
             for item in new_cases_list:
                 assert isinstance(item, int)
+
+    def test_country_new_cases(self,):
+        self.__test_country_property_int(
+            lambda country: country.new_cases
+        )
+
+    def test_country_new_cases_yesterday(self,):
+        self.__test_country_property_int(
+            lambda country: country.new_cases_yesterday
+        )
 
     def test_country_new_cases_weekly_averages(self,):
 
@@ -176,4 +196,10 @@ class TestHopkinsAPI:
 
         for country in self.__get_countries():
             assert isinstance(country.r_value, float)
+            assert 0 <= country.r_value <= 50
+
+    def test_country_r_value_yesterday(self,):
+
+        for country in self.__get_countries():
+            assert isinstance(country.r_value_yesterday, float)
             assert 0 <= country.r_value <= 50
