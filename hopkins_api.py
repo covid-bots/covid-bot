@@ -44,6 +44,10 @@ class CountryData:
         return self.confirmed_each_day[-1]
 
     @property
+    def confirmed_yesterday(self,) -> int:
+        return self.confirmed_each_day[-2]
+
+    @property
     def deaths_each_day(self,) -> typing.List[int]:
         """ A list of integers, where each cell represents the total death
         cases discovered up to the date that the cell represents. The first
@@ -57,7 +61,11 @@ class CountryData:
         return self.deaths_each_day[-1]
 
     @property
-    def deaths_today(self,) -> int:
+    def deaths_yesterday(self,) -> int:
+        return self.deaths_each_day[-2]
+
+    @property
+    def deaths_diff_today(self,) -> int:
         return self.deaths_each_day[-1] - self.deaths_each_day[-2]
 
     @property
@@ -74,7 +82,11 @@ class CountryData:
         return self.recovered_each_day[-1]
 
     @property
-    def recovered_today(self,) -> int:
+    def recovered_yesterday(self,) -> int:
+        return self.recovered_each_day[-2]
+
+    @property
+    def recovered_diff_today(self,) -> int:
         return self.recovered_each_day[-1] - self.recovered_each_day[-2]
 
     @property
@@ -95,7 +107,11 @@ class CountryData:
     @property
     def new_cases(self,) -> int:
         """ The number of cases that were discovered in the last day. """
-        return self.confirmed_each_day[-1] - self.confirmed_each_day[-2]
+        return self.new_cases_each_day[-1]
+
+    @property
+    def new_cases_yesterday(self,) -> int:
+        return self.new_cases_each_day[-2]
 
     def __new_cases_x_days_averages(self, days: int) -> typing.List[float]:
         """ Same as `new_cases_each_day`, but instead of representing each
@@ -163,6 +179,10 @@ class CountryData:
         """ The most recent R value. Calculated using the formula
         described in https://ynet.co.il/health/article/Bk5KKJOYv """
         return self.r_values_each_day[-1]
+
+    @property
+    def r_value_yesterday(self,) -> float:
+        return self.r_values_each_day[-2]
 
 
 class ApiFromCsv:
