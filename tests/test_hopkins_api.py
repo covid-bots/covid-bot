@@ -75,14 +75,6 @@ class TestHopkinsAPI:
             assert isinstance(
                 country, CountryData), "Must be a CountryAPI instance"
 
-    def test_country_name(self,):
-        api = self.__get_api_instance()
-
-        for country in self.__get_countries():
-            assert isinstance(country.name, str)
-            assert country.name in api.countries()
-            assert country.name, "Must be a non-empty string"
-
     # - - Confirmed - - #
 
     def test_country_confirmed_each_day(self,):

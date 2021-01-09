@@ -500,7 +500,7 @@ class DateHistoryCvsApi(ApiFromCsv):
         not_date_indexes = set()
         dates = list()
 
-        for index, header in self._headers:
+        for index, header in enumerate(self._headers):
             date = self.__string_to_date(header)
 
             if date is not None:
