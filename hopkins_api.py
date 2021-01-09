@@ -90,6 +90,26 @@ class CountryData:
         return self.recovered_each_day[-1] - self.recovered_each_day[-2]
 
     @property
+    def active_each_day(self,) -> typing.List[int]:
+        return [
+            confirmed - recovered - deaths
+            for confirmed, recovered, deaths
+            in zip(self.confirmed_each_day, self.recovered_each_day, self.deaths_each_day)
+        ]
+
+    @property
+    def active(self,) -> int:
+        return self.active_each_day[-1]
+
+    @property
+    def active_yesterday(self,) -> int:
+        return self.active_each_day[-2]
+
+    @property
+    def active_diff_today(self,) -> int:
+        return self.active_each_day[-1] - self.active_each_day[-2]
+
+    @property
     def new_cases_each_day(self,) -> typing.List[int]:
         """ A list of integers, where each cell represents the number of
         cases discovered each day. The first cell represents the 22nd of January

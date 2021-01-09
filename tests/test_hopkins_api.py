@@ -144,6 +144,28 @@ class TestHopkinsAPI:
             lambda country: country.recovered_diff_today
         )
 
+    # - - Active cases - - #
+
+    def test_country_active_each_day(self,):
+        self.__test_country_each_day_data(
+            lambda country: country.active_each_day
+        )
+
+    def test_country_active(self,):
+        self.__test_country_property_int(
+            lambda country: country.active
+        )
+
+    def test_country_active_yesterday(self,):
+        self.__test_country_property_int(
+            lambda country: country.active_yesterday
+        )
+
+    def test_country_active_diff_today(self,):
+        self.__test_country_property_int(
+            lambda country: country.active_diff_today
+        )
+
     # - - New cases (confirmed diff) - - #
 
     def test_country_new_cases_each_day(self,):
