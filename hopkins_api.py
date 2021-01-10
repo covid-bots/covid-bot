@@ -228,7 +228,7 @@ class ApiFromCsv:
         """ When initialized, requests data from the API, downloads the csv sheet
         and saves it in memory. """
 
-        self.__API_URL = url
+        self.__api_url = url
 
         # Download and save the confirmend cases history
         sheet = self.__request()
@@ -239,9 +239,9 @@ class ApiFromCsv:
         self._content = self.__change_types(sheet[1:])
 
     @property
-    def API_URL(self,):
+    def url(self,):
         """ The source of the data - The API data url. """
-        return self.__API_URL
+        return self.__api_url
 
     def __request(self,) -> typing.List[typing.List[str]]:
         """ Tries to download the csv sheet from the provided URL.
@@ -250,13 +250,13 @@ class ApiFromCsv:
 
         logging.info("Downloading data...")
 
-        response = requests.get(self.API_URL)
+        response = requests.get(self.url)
         self.__raw_response_content = response.content
 
         # Check if data loaded correctly
         if response.status_code != 200:
             raise RequestAPIError(
-                f"{self.API_URL}:\nResponse status {response.status_code}.")
+                f"{self.url}:\nResponse status {response.status_code}.")
 
         # convert downloaded content (in binary) to a 2d list with rows and
         # columns not very efficient, saves the whole downloaded spreadsheet
@@ -611,6 +611,13 @@ class CovidRecoveredHistory(DateHistoryCvsApi):
 
 
 class CovidHistoryDatabase:
+    """ An object that combines three different objects:
+    *   CovidDeathsHistory
+    *   CovidConfirmedHistory
+    *   CovidRecoveredHistory
+
+    It has methods to return data by a specific country, data by a specific
+    data, or even all data combined. """
 
     def __init__(self,):
 
@@ -650,26 +657,52 @@ class CovidHistoryDatabase:
         return [data['country'] for data in self.all_data()]
 
     def all_data(self,):
+        """ Returns the raw data, 'as is'. """
         return self.__data
 
-    def country_data(self, country: str):
-        return next(
-            data['data']
-            for data in self.all_data()
-            if data['country'] == country
-        )
+    def country_data(self, country: str) -> typing.List[dict]:
+        """ Returns the combined data for a specific country, as a list of
+        dictionaries. Each dictionary represents a single date. If the given
+        country is not supported by the database, returns `None`. """
+
+        try:
+            return next(
+                data['data']
+                for data in self.all_data()
+                if data['country'] == country
+            )
+
+        except StopIteration:
+            # If country not found in database, returns `None`.
+            return None
 
     def country(self, country: str):
-        return CountryData(data=self.country_data(country))
+        """ Returns a `CountryData` instance that contains information about
+        the given country. If country is not supported by the databases,
+        returns `None`. """
 
-    def date_data(self, date: datetime.date):
+        country = self.country_data(country)
+        if country is None:
+            # If country not found in database, returns `None`
+            return None
+
+        return CountryData(data=country)
+
+    def date_data(self, date: datetime.date) -> typing.List[dict]:
+        """ Returns a list of dictionaries. Each dictionary represents data
+        from a different country, where all data is from the given date. """
 
         data_list = list()
 
+        # Loops over each date in each country.
         for country_data in self.all_data():
             for date_data in country_data['data']:
+                # If the current date matches the given one
                 if date_data['date'] == date:
 
+                    # Deletes the 'date' field and replaces it with the
+                    # 'country' field. Adds the current dictionary data
+                    # to the 'data_list'
                     del date_data['date']
                     date_data['country'] = country_data['country']
                     data_list.append(date_data)

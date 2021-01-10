@@ -7,6 +7,8 @@ class TestHopkinsAPI:
     __API_INSTANCE = None
     __COUNTRIES = None
 
+    # pylint: disable=not-an-iterable
+
     # - - Helpers - - #
 
     @classmethod
