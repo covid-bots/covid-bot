@@ -3,6 +3,6 @@ instabot>=0.117.0
 pillow>=8.0.1
 matplotlib>=3.3.3
 python-bidi>=0.4.2
-googletrans>=3.0.0
+googletrans==3.1.0a0
 babel>=2.9.0
 numpy>=1.18.3
