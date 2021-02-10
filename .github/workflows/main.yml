@@ -32,7 +32,7 @@ jobs:
 
       - name: Install locales
         run: |
-          apt-get install -y locales
+          sudo apt-get install -y locales
 
       - name: Install dependencies
         run: |
