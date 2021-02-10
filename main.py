@@ -1,16 +1,16 @@
-from PIL import Image
 import os
-from instabot import Bot as Instabot
-from datetime import datetime
-import locale
+import typing
 import json
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
+from PIL import Image
+from instabot import Bot as Instabot
+
 from translator import Country, StringManager
 from painter import ImageGenerator, SingleDataPoster, PosterText
-from api import Covid19API, multipleDaysData
+from hopkins_api import CovidHistoryDatabase, CountryData
 
 
 formatter = logging.Formatter("[%(asctime)s] (%(levelname)s) | %(message)s")
@@ -32,6 +32,8 @@ class CovidStatsInstagramBot:
     SUBTITLES_COLOR = "#aaaaaa"
     ACCENT_COLOR = "#424242"
 
+    __api = None
+
     def __init__(self,
                  country_code: str,
                  username: str = None,
@@ -44,17 +46,29 @@ class CovidStatsInstagramBot:
             string_manager.config_country_translator(self._country)
         self._sm = string_manager
 
-        self.__data = None
+        self.__country_data_obj = None
         self.__insta_username = username
+
+    def __get_api(self,) -> CovidHistoryDatabase:
+        """ Returns the `CovidHistoryDatabase` instance used to generate
+        the image. """
+
+        if self.__api is None:
+            self.__api = CovidHistoryDatabase()
+        return self.__api
+
+    def _get_country_data(self,) -> typing.Optional[CountryData]:
+        """ Returns an instance that represents the covid stats in the current
+        country. Returns `None` if data is not found. """
+
+        if self.__country_data_obj is None:
+            self.__country_data_obj = self.__get_api().country(self._country.name)
+
+        return self.__country_data_obj
 
     @property
     def instagram_username(self,):
         return self.__insta_username
-
-    def get_data(self,) -> multipleDaysData:
-        if self.__data is None:
-            self.__data = Covid19API.get_stats(self._country.code)
-        return self.__data
 
     def to_image(self,
                  username: str = None,
@@ -65,31 +79,28 @@ class CovidStatsInstagramBot:
         if username is None:
             username = self.instagram_username
 
-        data = self.get_data()
-
-        yesterday_compare = data.compare_to_yesterday()
-        today_r_value = data.last_day_r_value()
+        data = self._get_country_data()
 
         img_gen = ImageGenerator(Image.open(self.TEMPLATE_IMAGE_PATH))
         img_gen.set_string_manager(self._sm)
 
-        img_gen.add_background(today_r_value)
+        img_gen.add_background(data.r_value)
         img_gen.add_data(
             data=[
                 SingleDataPoster(
                     self._sm.deaths,
-                    now=yesterday_compare.new.deaths,
-                    prev=yesterday_compare.old.deaths,
+                    now=data.deaths,
+                    prev=data.deaths_yesterday,
                 ),
                 SingleDataPoster(
                     self._sm.active_cases,
-                    now=yesterday_compare.new.active_cases,
-                    prev=yesterday_compare.old.active_cases,
+                    now=data.active,
+                    prev=data.active_yesterday,
                 ),
                 SingleDataPoster(
                     self._sm.recovered,
-                    now=yesterday_compare.new.recovered_cases,
-                    prev=yesterday_compare.old.recovered_cases,
+                    now=data.recovered,
+                    prev=data.recovered_yesterday,
                 ),
             ],
             start_relative_y=0.07,
@@ -100,17 +111,19 @@ class CovidStatsInstagramBot:
             PosterText([
                 self._sm.new_cases,
                 self._sm.format_number(
-                    yesterday_compare.confirmed_diff, leading_zeros=4),
+                    data.new_cases,
+                    leading_zeros=4
+                ),
             ]),
             y_relative=0.425,
             side="l",
             color=self.ACCENT_COLOR,
         )
 
-        cases_data = data.get_cases_a_day_list()[-self.STATS_OF_X_DAYS:]
+        cases_data = data.new_cases_each_day[-self.STATS_OF_X_DAYS:]
         img_gen.add_graph(
             data=cases_data,
-            r_value=today_r_value,
+            r_value=data.r_value,
             relative_size=(0.475, 0.250),
             relative_pos=(0.7, 0.45),
             title=self._sm.new_cases_graph_title(
@@ -122,17 +135,17 @@ class CovidStatsInstagramBot:
         img_gen.add_poster_title(
             PosterText([
                 self._sm.basic_reproduction,
-                self._sm.format_number(today_r_value, floating_max=3),
+                self._sm.format_number(data.r_value, floating_max=3),
             ]),
             y_relative=0.725,
             side="r",
             color=self.ACCENT_COLOR,
         )
 
-        r_value_data = data.get_r_values()[-self.STATS_OF_X_DAYS:]
+        r_value_data = data.r_values_each_day[-self.STATS_OF_X_DAYS:]
         img_gen.add_graph_r_values(
             data=r_value_data,
-            r_value=today_r_value,
+            r_value=data.r_value,
             guide_color=self.ACCENT_COLOR,
             relative_size=(0.475, 0.250),
             relative_pos=(0.3, 0.75),
@@ -287,23 +300,20 @@ class CountryConfig:
 
 
 def main():
-    logger.info("Checking for new information...")
-    changes = Covid19API.get_changes()
 
     for country_config in ConfigFile('config.json'):
-        country_code = country_config.country.code
 
-        if changes.check_if_new(country_code):
-            logger.info(f"{country_config.country.name} - New data found")
+        username, password = country_config.instagram_login
+        country_config.to_bot().generate_and_upload(
+            username=username,
+            password=password
+        )
 
-            username, password = country_config.instagram_login
-            country_config.to_bot().generate_and_upload(
-                username=username,
-                password=password
-            )
-
-            logger.info(
-                f"{country_config.country.name} - Uploaded image to @{username}")
+        logger.info(
+            "%s - Uploaded image to @%s",
+            country_config.country.name,
+            username,
+        )
 
 
 if __name__ == "__main__":
