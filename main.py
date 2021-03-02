@@ -135,7 +135,7 @@ class CovidStatsInstagramBot:
         img_gen.add_poster_title(
             PosterText([
                 self._sm.basic_reproduction,
-                self._sm.format_number(data.r_value, floating_max=3),
+                self._sm.format_number(data.r_value, floating_max=2),
             ]),
             y_relative=0.725,
             side="r",

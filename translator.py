@@ -88,7 +88,7 @@ class StringManager:
             string = string.replace(':', f':0{leading_zeros}')
 
         if floating_max and isinstance(number, float):
-            string = string.replace('n}', f'.{floating_max}n}}')
+            string = string.replace('n}', f'.{floating_max}f}}')
 
         lang = self.__dest_lang
         if lang is None:
