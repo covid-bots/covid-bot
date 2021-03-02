@@ -61,7 +61,6 @@ class Country:
             raise ValueError("Country code must be a 2 character string")
 
     def __str__(self):
-        string = str()
         return f"Country({self.name}, {self.code}), PopularLanguage({self.lang_name}, {self.lang_code})"
 
 
